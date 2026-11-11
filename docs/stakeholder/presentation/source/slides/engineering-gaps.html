@@ -1,0 +1,29 @@
+<section id="engineering-gaps" data-transition="fade" style="background:#F5F6F2;color:#0F1B2D;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:48px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;letter-spacing:3px;text-transform:uppercase;color:#B4481A">Where it hurts · continued</p>
+<h2 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:72px;font-weight:700;line-height:1.1;letter-spacing:-1px;color:#0F1B2D">Three engineering gaps that let incidents repeat</h2>
+</div>
+<div style="display:flex;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;border-top:4px solid #0F1B2D;padding:24px 0 0 0">
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:32px;font-weight:600;line-height:1.15;color:#0F1B2D">Change and release risk</h3>
+<p style="font-size:24px;line-height:1.45;color:#42506A">Releases are judged from the diff alone, without dependents, test gaps or incident history.</p>
+<p style="font-size:24px;line-height:1.45;color:#0F1B2D"><b>Impact:</b> avoidable change failures and rollbacks</p>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:20px;color:#2A5DB0">Module · Change risk</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;border-top:4px solid #0F1B2D;padding:24px 0 0 0">
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:32px;font-weight:600;line-height:1.15;color:#0F1B2D">Runbooks and incident learning</h3>
+<p style="font-size:24px;line-height:1.45;color:#42506A">Runbooks drift from how systems really work, and post-incident actions stay open.</p>
+<p style="font-size:24px;line-height:1.45;color:#0F1B2D"><b>Impact:</b> the same incidents recur; new on-call engineers lose time</p>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:20px;color:#2A5DB0">Module · Knowledge &amp; runbooks</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;border-top:4px solid #B4481A;padding:24px 0 0 0">
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:32px;font-weight:600;line-height:1.15;color:#0F1B2D">Ownership and end-of-life software</h3>
+<p style="font-size:24px;line-height:1.45;color:#42506A">No current map of who owns a service, what depends on it, or which runtimes are past support.</p>
+<p style="font-size:24px;line-height:1.45;color:#0F1B2D"><b>Impact:</b> unowned services and unplanned upgrade work</p>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:20px;color:#2A5DB0">Module · Service catalogue</p>
+</div>
+</div>
+<p style="font-size:28px;line-height:1.45;color:#0F1B2D;border-left:4px solid #B4481A;padding-left:24px">In the demo data all three lead back to INC-1042: a pending release repeats its pool-size change, its runbook is stale, and the same cause has recurred three times in 90 days.</p>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#6B7890">Engineering Command Centre · 4 · Qualitative assessment; to be validated with baseline data during the pilot</p>
+<aside>These three sit underneath the five on the previous slide. They are why the same incident comes back: a risky change ships without its history, the runbook used to fix it last time is out of date, and nobody is sure who owns the service it depends on. In the prototype, all three point back to INC-1042: the change-risk screen flags a release that repeats the same pool-size change, the runbook used for it is stale, and the service catalogue shows who depends on the ledger. These are not in the pilot slice. They show where the shared platform goes next.</aside>
+</section>

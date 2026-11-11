@@ -111,7 +111,7 @@ td:first-child { color: var(--ink); font-weight: 600; }
       <div class="eyebrow">The problem</div>
       <p class="statement">Engineering teams make high-stakes decisions from <em>scattered evidence</em>, under time pressure, with no consistent record of why.</p>
       <div class="read stack" style="gap:14px">
-        <p>During an incident, an on-call engineer opens a dashboard, a log search, the deploy history, a runbook wiki and a chat channel, then pieces the story together by hand. The same pattern repeats when an architect turns a requirement into a design, when security triages a scanner export, and when finance reconciles a cloud bill.</p>
+        <p>During an incident, an on-call engineer opens a dashboard, a log search, the deploy history, a runbook wiki and a chat channel, then pieces the story together by hand. The same pattern repeats when an architect turns a requirement into a design, when a release manager judges whether a change is safe to ship, when security triages a scanner export, and when finance reconciles a cloud bill. Runbooks drift and service ownership goes stale in between, so each new incident starts from less than the last one learned.</p>
         <p>Meanwhile, AI assistants are arriving one team at a time. Each brings its own data handling and none shares approval rules, evaluation or an audit trail. Speed improves locally while risk grows centrally.</p>
       </div>
       <div class="cards" style="margin-top:12px">
@@ -125,7 +125,7 @@ td:first-child { color: var(--ink); font-weight: 600; }
   <section>
     <div class="wrap stack">
       <div class="eyebrow">Where it shows up</div>
-      <h2>Five places the gap costs us</h2>
+      <h2>Eight places the gap costs us</h2>
       <div class="tbl-wrap"><table>
         <tr><th style="width:22%">Area</th><th style="width:42%">What happens today</th><th>Business impact</th></tr>
         <tr><td>Production support</td><td>On-call engineers correlate logs, deploys and dashboards by hand</td><td>Longer outages; senior staff pulled off roadmap work</td></tr>
@@ -133,6 +133,9 @@ td:first-child { color: var(--ink); font-weight: 600; }
         <tr><td>Security</td><td>Findings pile up without exposure or reachability context</td><td>Fix effort spent on the wrong findings</td></tr>
         <tr><td>Cloud and licence cost</td><td>Spend reviewed after the fact, in spreadsheets</td><td>Idle resources and overlapping licences go unnoticed</td></tr>
         <tr><td>AI governance</td><td>Assistants used without approval gates, evaluation or audit</td><td>Changes nobody can explain or reproduce</td></tr>
+        <tr><td>Change and release risk</td><td>Releases judged from the diff alone, without dependents, test gaps or incident history</td><td>Avoidable change failures and rollbacks</td></tr>
+        <tr><td>Runbooks and incident learning</td><td>Runbooks drift from how systems really work; post-incident actions stay open</td><td>The same incidents recur; new on-call engineers lose time</td></tr>
+        <tr><td>Service ownership and end-of-life software</td><td>No current map of who owns a service, what depends on it, or which runtimes are past support</td><td>Unowned services and unplanned upgrade work</td></tr>
       </table></div>
       <p style="font-size:14px;color:var(--muted)">Qualitative assessment from discovery conversations. The pilot measures a baseline in its first two weeks instead of relying on industry figures.</p>
     </div>
@@ -190,6 +193,9 @@ td:first-child { color: var(--ink); font-weight: 600; }
         <div class="card"><span class="k">Finance</span><h3>Traceable estimates</h3><p>TCO and savings with open formulas; estimated and realised savings kept apart.</p></div>
         <div class="card"><span class="k">Leadership</span><h3>Team-level insight</h3><p>DORA-style measures with sample sizes, never used to rank individuals.</p></div>
         <div class="card"><span class="k">Risk and audit</span><h3>One governance model</h3><p>Who did what, why, approved by whom, linked by correlation ID.</p></div>
+        <div class="card"><span class="k">Release and platform teams</span><h3>Safer releases</h3><p>Risky changes flagged before deploy, with the weighted factors and past incidents behind the score.</p></div>
+        <div class="card"><span class="k">On-call engineers</span><h3>Runbooks that match reality</h3><p>Drift checked against real incidents; repeat causes surfaced with their open follow-up actions.</p></div>
+        <div class="card"><span class="k">Service owners</span><h3>A current service map</h3><p>Ownership, dependents and runtimes nearing end of support, ranked by an open formula.</p></div>
       </div>
     </div>
   </section>

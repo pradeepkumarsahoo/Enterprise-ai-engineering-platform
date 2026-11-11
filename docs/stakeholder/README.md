@@ -35,6 +35,9 @@ Where the gap shows up today:
 | Security | Findings pile up without exposure or reachability context | Fix effort spent on the wrong findings |
 | Cloud and licence cost | Spend reviewed after the fact, in spreadsheets | Idle resources and overlapping licences go unnoticed |
 | AI governance | Assistants used without approval gates, evaluation or audit | Changes nobody can explain or reproduce |
+| Change and release risk | Releases judged from the diff alone, without dependents, test gaps or incident history | Avoidable change failures and rollbacks |
+| Runbooks and incident learning | Runbooks drift from how systems really work; post-incident actions stay open | The same incidents recur; new on-call engineers lose time |
+| Service ownership and end-of-life software | No current map of who owns a service, what depends on it, or which runtimes are past support | Unowned services and unplanned upgrade work |
 
 *Qualitative assessment from discovery conversations. The pilot measures a real baseline in its
 first two weeks rather than relying on industry figures.*
@@ -82,13 +85,16 @@ evaluations, data provenance)
 |--------|--------------|
 | Command centre | KPIs, each traced to the records it was calculated from |
 | Production support | Evidence-backed incident investigation and post-incident reports |
+| Knowledge & runbooks | Runbook drift checked against real incidents, repeat-incident detection, overdue post-incident actions |
 | Architecture & ADLC | Proposals, ADRs and NFR traceability from a structured requirement |
 | Developer assistant | Scaffolds, test suggestions and PR review, shown as diffs for approval |
+| Change risk | Pre-deploy risk score from rule-based factors, similar past incidents and suggested release conditions |
 | Jira & delivery | Backlog generation, sprint risk, blocked and ageing work, release notes |
 | Chaos engineering | Sandbox-only experiments with abort rules and SLO comparison |
 | Licensing & TCO | Multi-year estimates with open formulas and editable prices |
 | FinOps | Cost anomalies and recommendations; estimated and realised savings kept apart |
 | Security | Findings prioritised by exposure and reachability; exceptions approved and tracked |
+| Service catalogue | Ownership, dependencies and end-of-life runtimes, with a transparent debt-priority formula |
 | Engineering intelligence | DORA-style measures at team level, never used to rank individuals |
 
 **Built-in guardrails:** evidence before conclusions; permissions, money and state changes handled
@@ -120,6 +126,11 @@ Outcomes expected as the platform extends beyond the pilot slice:
 - **Security** — remediation effort directed at findings that are exposed and reachable.
 - **Finance** — traceable TCO and savings estimates, with realised savings tracked separately.
 - **Risk and audit** — one record of who did what, why, and who approved it.
+- **Release and platform teams** — risky changes flagged before deploy, with the factors and past
+  incidents behind the score.
+- **On-call engineers** — runbooks kept in line with what responders actually do, and repeat
+  incidents surfaced with their open follow-up actions.
+- **Service owners** — a current view of ownership, dependents and runtimes nearing end of support.
 
 **Proposed pilot:** eight weeks, read-only, incident investigation on [2–3 services] in shadow mode,
 with a go/no-go review at week 8.
@@ -182,6 +193,28 @@ rankings.
 
 ![Engineering intelligence](screenshots/08-engineering-intelligence.png)
 
+### Change risk — pre-deploy assessment
+A release of `loyalty-ledger` scores 7.1 out of 10. Each factor (a pool-size change matching
+INC-1042, a schema migration, an event contract change, a coverage gap, the deploy window) has a
+weight and links to a record. The score comes from versioned rules, not the model. The agent
+suggests release conditions, and a score of 7 or more needs a second approver.
+
+![Change risk](screenshots/09-change-risk.png)
+
+### Knowledge & runbooks
+Runbook health checked against what responders did in real incidents. RB-017 still names a
+setting removed two releases ago, and a draft edit is offered to the owning team. Pool exhaustion
+has recurred three times in 90 days while its follow-up action is overdue.
+
+![Knowledge and runbooks](screenshots/10-knowledge-runbooks.png)
+
+### Service catalogue
+Ownership, tier, runtime support status and dependents for each service, ranked by a
+deterministic debt-priority formula. Shows the blast radius of `loyalty-ledger` and states where
+dependency data is missing.
+
+![Service catalogue](screenshots/11-service-catalogue.png)
+
 ---
 
 ## Files in this folder
@@ -190,7 +223,7 @@ rankings.
 |------|------------|-------------|
 | `problem-statement-and-positioning.html` | Pre-read: problem, positioning, value by stakeholder, decision requested | Open in any browser |
 | `prototype/command-centre-prototype.html` | Clickable product mockup for the live demo | Open in any browser (no server or install needed) |
-| `presentation/source/` | Source of the 13-slide stakeholder deck (`deck.json` + one HTML file per slide, with speaker notes) | Edit as source; present from the online deck |
+| `presentation/source/` | Source of the 14-slide stakeholder deck (`deck.json` + one HTML file per slide, with speaker notes) | Edit as source; present from the online deck |
 | `presentation/` *(add the .pptx here)* | PowerPoint export of the deck | Download from the online deck, see below |
 | `screenshots/` | Prototype screenshots used in this README | Any image viewer |
 
@@ -215,6 +248,15 @@ the deck's menu, and save it as `presentation/engineering-command-centre-stakeho
 4. **Approvals**: as the SRE you cannot approve your own request. Switch **Viewing as** to
    Platform admin and approve it with a written reason.
 5. **Audit log**: the request and the decision are recorded.
+
+Optional extension (about 3 minutes), for engineering and platform leads:
+
+6. **Change risk**: the `loyalty-ledger` release repeats the pool-size change behind INC-1042.
+   Show how the score is built from weighted factors, and that 7 or more needs a second approver.
+7. **Knowledge & runbooks**: RB-017, the runbook used in INC-1042, is stale, and the same cause has
+   recurred three times. Show the draft edit going to the owning team for review.
+8. **Service catalogue**: `notification-worker` has no owner and runs on an unsupported runtime.
+   Show the blast radius and the "could not establish" note.
 
 ### Before presenting
 

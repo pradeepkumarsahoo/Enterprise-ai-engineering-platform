@@ -272,9 +272,9 @@ ul.clean { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
 
   /* ---------- Navigation ---------- */
   const NAV = [
-    ['Operate', [['overview', 'Overview'], ['incident', 'Production support'], ['chaos', 'Chaos engineering']]],
-    ['Build', [['architecture', 'Architecture & ADLC'], ['developer', 'Developer assistant'], ['delivery', 'Jira & delivery']]],
-    ['Cost & risk', [['licensing', 'Licensing & TCO'], ['finops', 'FinOps'], ['security', 'Security'], ['insights', 'Engineering intelligence']]],
+    ['Operate', [['overview', 'Overview'], ['incident', 'Production support'], ['knowledge', 'Knowledge & runbooks'], ['chaos', 'Chaos engineering']]],
+    ['Build', [['architecture', 'Architecture & ADLC'], ['developer', 'Developer assistant'], ['changes', 'Change risk'], ['delivery', 'Jira & delivery']]],
+    ['Cost & risk', [['licensing', 'Licensing & TCO'], ['finops', 'FinOps'], ['security', 'Security'], ['catalogue', 'Service catalogue'], ['insights', 'Engineering intelligence']]],
     ['Govern', [['agents', 'Agent management'], ['evaluations', 'Evaluations'], ['approvals', 'Approvals'], ['audit', 'Audit log'], ['integrations', 'Integrations']]],
   ];
   const TITLES = Object.fromEntries(NAV.flatMap((g) => g[1]));
@@ -551,6 +551,111 @@ ul.clean { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
       </div>
     </div>`;
 
+  V.changes = () => `${head('Change risk', 'Release loyalty-ledger v3.8 · pre-deploy assessment', 'Risk factors are computed by rules from the change set, dependency map, test results and incident history. The AI summarises them and suggests release conditions; it does not set the score.', '<span class="badge b-syn">Seeded change set</span>')}
+    <div class="grid g-4">
+      <div class="panel kpi"><span class="label">Change risk score</span><span class="value">7.1 / 10</span><span class="delta up-bad">High · second approver required at ≥ 7</span><span class="src">rules change-risk v0.6</span></div>
+      <div class="panel kpi"><span class="label">Files changed</span><span class="value">23</span><span class="delta">incl. 2 config, 1 schema migration</span><span class="src">from PR #331 and #334</span></div>
+      <div class="panel kpi"><span class="label">Downstream services</span><span class="value">4</span><span class="delta up-bad">consume the changed event contract</span><span class="src">from service catalogue</span></div>
+      <div class="panel kpi"><span class="label">Coverage on changed lines</span><span class="value">61%</span><span class="delta up-bad">gate is 80%</span><span class="src">from CI run 9917</span></div>
+    </div>
+    <div class="grid g-main">
+      <div class="panel">
+        <div class="panel-h"><h2>Risk factors</h2><span class="sub">each factor links to a record</span></div>
+        <div class="scroll-x"><table class="t"><tr><th>Factor</th><th>Signal</th><th>Weight</th><th>Evidence</th></tr>
+          <tr><td>Connection setting changed</td><td><code>ledger.db.pool.max: 40 → 25</code>. Same pattern as INC-1042</td><td class="num mono">+2.5</td><td class="mono">C1 · config diff</td></tr>
+          <tr><td>Schema migration</td><td>Adds non-null column <code>expiry_at</code> to <code>points_txn</code> (48M rows)</td><td class="num mono">+1.8</td><td class="mono">C2 · migration 0142</td></tr>
+          <tr><td>Event contract change</td><td><code>PointsAccrued</code> field <code>pts</code> renamed to <code>points</code>; 4 consumers</td><td class="num mono">+1.5</td><td class="mono">C3 · schema registry</td></tr>
+          <tr><td>Test coverage gap</td><td>61% of changed lines covered; migration path untested</td><td class="num mono">+0.8</td><td class="mono">C4 · CI run 9917</td></tr>
+          <tr><td>Deploy window</td><td>Scheduled Fri 16:30, outside the low-traffic window</td><td class="num mono">+0.5</td><td class="mono">C5 · release calendar</td></tr>
+        </table></div>
+        <div class="formula">risk = Σ factor weights, capped at 10
+rules in code, versioned · the model never changes a weight</div>
+        <div><b>Could not establish</b>
+          <ul class="clean unknown"><li>Whether partner-gateway still reads the old <code>pts</code> field. It has no contract tests and no traces in the last 7 days.</li></ul></div>
+      </div>
+      <div class="panel">
+        <div class="panel-h"><h2>Similar past changes</h2><span class="sub">from incident history</span></div>
+        <div class="timeline">
+          <div class="tl-item hot"><span class="tl-time">Today</span><span class="tl-dot"></span><div class="tl-body"><b>INC-1042 · pool limit cut 50 → 20</b><p>membership-api · SEV2 · latency 10×</p></div></div>
+          <div class="tl-item"><span class="tl-time">Sep 12</span><span class="tl-dot"></span><div class="tl-body"><b>CHG-2148 · points_txn migration</b><p>Table lock for 6 min · SEV3</p></div></div>
+        </div>
+        <div class="panel-h"><h2>Suggested release conditions</h2></div>
+        <ul class="clean"><li>Ship the pool change as its own deploy, after load test</li><li>Run the migration online with a backfill job</li><li>Add a contract test for partner-gateway before release</li><li>Canary 5% for 30 min; halt if p95 &gt; 400 ms</li></ul>
+        <div><button class="btn btn-primary" data-toast="Release gate request queued for approval (release.gate.approve). Risk ≥ 7 needs a second approver.">Request release approval</button></div>
+        <p class="note">Advisory gate. The platform does not deploy; the pipeline reads the decision.</p>
+      </div>
+    </div>`;
+
+  V.knowledge = () => `${head('Knowledge & runbooks', 'Runbook health and incident learning', 'Runbooks are checked against what responders actually did in incidents. Suggested edits are drafts for the owning team to review.', '<span class="badge b-syn">Synthetic knowledge base</span>')}
+    <div class="grid g-4">
+      <div class="panel kpi"><span class="label">Runbooks</span><span class="value">64</span><span class="delta">across 46 services</span><span class="src">from knowledge base</span></div>
+      <div class="panel kpi"><span class="label">Validated in last 90 days</span><span class="value">59%</span><span class="delta up-bad">38 of 64</span><span class="src">from runbook review records</span></div>
+      <div class="panel kpi"><span class="label">Repeat incidents</span><span class="value">5</span><span class="delta up-bad">same cause within 90 days</span><span class="src">from 31 incident records</span></div>
+      <div class="panel kpi"><span class="label">Post-incident actions overdue</span><span class="value">9</span><span class="delta">of 41 open</span><span class="src">from local Jira simulator</span></div>
+    </div>
+    <div class="grid g-main">
+      <div class="panel">
+        <div class="panel-h"><h2>Runbook health</h2><span class="sub">drift detected by rules, explained by the agent</span></div>
+        <div class="scroll-x"><table class="t"><tr><th>Runbook</th><th>Service</th><th>Last validated</th><th>Used (90d)</th><th>Drift signal</th><th>Status</th></tr>
+          <tr><td>RB-017 · DB connection pool exhaustion</td><td>membership-api</td><td class="num">212 days</td><td class="num">3</td><td>Step 3 names env var <code>MAX_POOL</code>, removed in v2.11</td><td><span class="badge b-crit">Stale</span></td></tr>
+          <tr><td>RB-044 · Promotion rule rollback</td><td>promotion-engine</td><td class="num">401 days</td><td class="num">1</td><td>Responders skipped steps 2–4 in INC-1039 and used a feature flag</td><td><span class="badge b-warn">Drifting</span></td></tr>
+          <tr><td>RB-052 · Ledger replay after outage</td><td>loyalty-ledger</td><td class="num">Never</td><td class="num">0</td><td>No owner since the team change in June</td><td><span class="badge b-crit">Unowned</span></td></tr>
+          <tr><td>RB-031 · Event bus consumer lag</td><td>notification-worker</td><td class="num">34 days</td><td class="num">2</td><td>None</td><td><span class="badge b-ok">Current</span></td></tr>
+        </table></div>
+        <h2 style="font-size:15px">Draft edit · RB-017 step 3</h2>
+        <div class="diff">
+          <div class="del">- 3. Raise MAX_POOL in the service environment and restart.</div>
+          <div class="add">+ 3. Compare hikari.maximum-pool-size with the previous release</div>
+          <div class="add">+    (rendered config). Restore it through a reviewed config change.</div>
+        </div>
+        <div class="row" style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary" data-toast="Draft edit sent to Membership & Identity for review (knowledge.edit.propose). Nothing is published until the owner approves.">Propose runbook edit</button></div>
+      </div>
+      <div class="panel">
+        <div class="panel-h"><h2>Repeat incident</h2><span class="badge b-crit">3 in 90 days</span></div>
+        <p><b>Connection pool exhaustion</b></p>
+        <p class="hint">INC-0987 (Aug 4), INC-1011 (Sep 19) and INC-1042 (today), across 2 services. Each was resolved by restoring the pool limit.</p>
+        <p class="note">Action from INC-0987, “alert on pool saturation above 90%”, is still open. It was due Aug 30.</p>
+        <div class="panel-h"><h2>Overdue actions by team</h2></div>
+        ${[['Membership', 4, 'var(--accent)'], ['Loyalty', 3, 'var(--accent)'], ['Platform', 2, 'var(--warn)'], ['Commerce', 0, 'var(--muted)']].map(([l, v, c]) => `<div class="bar-row"><span>${l}</span><div class="bar"><span style="width:${(v / 4) * 100}%;background:${c}"></span></div><span class="num mono">${v}</span></div>`).join('')}
+        <span class="src">team-level only · no individual tracking</span>
+      </div>
+    </div>`;
+
+  V.catalogue = () => `${head('Service catalogue', 'Ownership, dependencies and end-of-life software', 'Built from pipeline, repository and dependency-manifest records. Gaps are shown as gaps, not guessed.', '<span class="badge b-syn">Synthetic inventory</span>')}
+    <div class="grid g-4">
+      <div class="panel kpi"><span class="label">Services</span><span class="value">46</span><span class="delta">12 tier-0 or tier-1</span><span class="src">from pipeline records</span></div>
+      <div class="panel kpi"><span class="label">No active owner</span><span class="value">4</span><span class="delta up-bad">incl. notification-worker</span><span class="src">from team directory (synthetic)</span></div>
+      <div class="panel kpi"><span class="label">End-of-life runtime</span><span class="value">7</span><span class="delta up-bad">2 more within 90 days</span><span class="src">from sample lifecycle catalogue</span></div>
+      <div class="panel kpi"><span class="label">Debt items prioritised</span><span class="value">23</span><span class="delta">5 above 7.0</span><span class="src">from 3 sources</span></div>
+    </div>
+    <div class="grid g-main">
+      <div class="panel">
+        <div class="panel-h"><h2>Services by debt priority</h2><span class="sub">top 5 of 46</span></div>
+        <div class="scroll-x"><table class="t"><tr><th>Service</th><th>Owner</th><th>Tier</th><th>Runtime</th><th>Support</th><th>Dependents</th><th>Priority</th></tr>
+          <tr><td>loyalty-ledger</td><td>Loyalty</td><td>tier0</td><td class="mono">Java 11</td><td><span class="badge b-warn">Ends in 41 days</span></td><td class="num">6</td><td class="mono num"><b>8.6</b></td></tr>
+          <tr><td>notification-worker</td><td><span class="badge b-crit">None since Jun</span></td><td>tier2</td><td class="mono">Node 16</td><td><span class="badge b-crit">Ended</span></td><td class="num">1</td><td class="mono num"><b>7.9</b></td></tr>
+          <tr><td>partner-gateway</td><td>Commerce</td><td>tier1</td><td class="mono">Python 3.8</td><td><span class="badge b-crit">Ended</span></td><td class="num">3</td><td class="mono num"><b>7.2</b></td></tr>
+          <tr><td>membership-api</td><td>Membership & Identity</td><td>tier0</td><td class="mono">Java 17</td><td><span class="badge b-ok">Supported</span></td><td class="num">9</td><td class="mono num">3.1</td></tr>
+          <tr><td>promotion-engine</td><td>Loyalty</td><td>tier1</td><td class="mono">Go 1.22</td><td><span class="badge b-ok">Supported</span></td><td class="num">4</td><td class="mono num">2.4</td></tr>
+        </table></div>
+        <div class="formula">priority = asset_tier × dependents × support_proximity × (no owner ? 1.5 : 1)
+deterministic · weights in Settings</div>
+      </div>
+      <div class="panel">
+        <div class="panel-h"><h2>Blast radius · loyalty-ledger</h2><span class="sub">6 dependents</span></div>
+        <div class="arch" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+          <div class="box"><b>promotion-engine</b>tier1 · sync</div>
+          <div class="box"><b>membership-api</b>tier0 · sync</div>
+          <div class="box"><b>notification-worker</b>tier2 · events</div>
+          <div class="box"><b>partner-gateway</b>tier1 · events</div>
+          <div class="box"><b>mobile-bff</b>tier1 · sync</div>
+          <div class="box"><b>reporting-etl</b>tier3 · batch</div>
+        </div>
+        <div><b>Could not establish</b><ul class="clean unknown"><li>3 services have no dependency manifest. Their callers are inferred from 7 days of traces only.</li></ul></div>
+        <div><button class="btn btn-primary" data-toast="Owner assignment for notification-worker queued for approval (catalogue.owner.assign)">Propose owner for notification-worker</button></div>
+      </div>
+    </div>`;
+
   function tcoCalc() {
     const price = { standard: 420, enterprise: 610 }[state.tco.tier];
     let total = 0, rows = '', users = state.tco.users;
@@ -627,6 +732,8 @@ total = Σ cost(year 1..${state.tco.years})   price source: sample catalogue, 20
       <tr><td>incident-investigator</td><td class="mono">1.3</td><td>SRE</td><td class="mono hint">metrics.query, logs.search, deploys.list, runbooks.search</td><td class="num">58</td><td><span class="badge b-ok">Active</span></td></tr>
       <tr><td>architecture-proposer</td><td class="mono">0.9</td><td>Architecture</td><td class="mono hint">knowledge.search, templates.render</td><td class="num">12</td><td><span class="badge b-ok">Active</span></td></tr>
       <tr><td>pr-reviewer</td><td class="mono">1.1</td><td>Dev productivity</td><td class="mono hint">diff.read, standards.search</td><td class="num">47</td><td><span class="badge b-ok">Active</span></td></tr>
+      <tr><td>change-risk-assessor</td><td class="mono">0.6</td><td>Release engineering</td><td class="mono hint">diff.read, deploys.list, incidents.search, coverage.read</td><td class="num">19</td><td><span class="badge b-ok">Active</span></td></tr>
+      <tr><td>runbook-curator</td><td class="mono">0.3</td><td>SRE</td><td class="mono hint">runbooks.search, incidents.search</td><td class="num">9</td><td><span class="badge b-warn">Evaluation only</span></td></tr>
       <tr><td>finops-analyst</td><td class="mono">0.4</td><td>FinOps</td><td class="mono hint">costs.query</td><td class="num">25</td><td><span class="badge b-warn">Evaluation only</span></td></tr>
     </table></div></div>`;
 
@@ -636,6 +743,7 @@ total = Σ cost(year 1..${state.tco.years})   price source: sample catalogue, 20
       <tr><td>Incident investigation</td><td class="num">40</td><td>Unsupported claims</td><td class="num">6</td><td class="num">2</td><td><span class="badge b-ok">Pass</span></td></tr>
       <tr><td>Prompt injection</td><td class="num">25</td><td>Tool policy held</td><td class="num">25 / 25</td><td class="num">25 / 25</td><td><span class="badge b-ok">Pass</span></td></tr>
       <tr><td>TCO arithmetic</td><td class="num">60</td><td>Exact match</td><td class="num">60 / 60</td><td class="num">60 / 60</td><td><span class="badge b-ok">Pass</span></td></tr>
+      <tr><td>Change risk</td><td class="num">30</td><td>Risky changes flagged (recall)</td><td class="num">0.70</td><td class="num">0.83</td><td><span class="badge b-ok">Pass</span></td></tr>
       <tr><td>FinOps anomalies</td><td class="num">90</td><td>Precision / recall</td><td class="num">0.82 / 0.76</td><td class="num">0.80 / 0.81</td><td><span class="badge b-warn">Review</span></td></tr>
     </table></div></div>`;
 
