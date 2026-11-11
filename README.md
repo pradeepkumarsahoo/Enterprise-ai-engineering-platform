@@ -6,7 +6,7 @@ a governed AI layer for the software lifecycle and production operations.
 > Independently developed reference concept. All data shown is synthetic, and the prototype uses a
 > deterministic mock AI provider. Nothing here is a production outcome.
 
-![Command Centre overview](screenshots/01-overview.png)
+![Command Centre overview](docs/stakeholder/screenshots/01-overview.png)
 
 ---
 
@@ -129,13 +129,13 @@ with a go/no-go review at week 8.
 ## 4. Screenshots from the prototype
 
 All screens use synthetic data and the mock AI provider. Captured from
-`prototype/command-centre-prototype.html` at 1440 px width.
+[`prototype/command-centre-prototype.html`](docs/stakeholder/prototype/command-centre-prototype.html) at 1440 px width.
 
 ### Overview — command centre
 Open incidents, change failure rate, pending approvals and cloud spend. Each figure names the records
 it comes from. Agent activity shows runs, failures, latency and estimated model cost.
 
-![Overview](screenshots/01-overview.png)
+![Overview](docs/stakeholder/screenshots/01-overview.png)
 
 ### Production support — incident investigation (INC-1042)
 `membership-api` latency rose tenfold after deploy v2.14. Latency and DB-pool charts mark the deploy.
@@ -144,55 +144,55 @@ E1–E7. A competing hypothesis is ruled down, and the "could not establish" lis
 agent doesn't know. A prompt-injection attempt in the logs is flagged and ignored. Remediation steps
 are simulated and need approval.
 
-![Incident investigation](screenshots/02-incident-investigation.png)
+![Incident investigation](docs/stakeholder/screenshots/02-incident-investigation.png)
 
 ### Approvals — human in the loop
 Each request shows its risk, environment and the permission the decider needs. A written reason is
 mandatory, and requesters cannot approve their own requests.
 
-![Approvals](screenshots/03-approvals.png)
+![Approvals](docs/stakeholder/screenshots/03-approvals.png)
 
 ### Audit log
 An append-only record of actor, action, target, outcome and correlation ID, including denied
 actions such as a blocked tool call.
 
-![Audit log](screenshots/04-audit-log.png)
+![Audit log](docs/stakeholder/screenshots/04-audit-log.png)
 
 ### Architecture & ADLC
 Two architecture options for a global loyalty platform compared against requirements, a container
 view, NFR coverage with gaps, and open questions for the business. Marked as a draft for architect
 review.
 
-![Architecture](screenshots/05-architecture.png)
+![Architecture](docs/stakeholder/screenshots/05-architecture.png)
 
 ### FinOps
 Monthly spend by team, a statistically flagged anomaly with its likely cause, and recommendations
 that track estimated and realised savings in separate columns.
 
-![FinOps](screenshots/06-finops.png)
+![FinOps](docs/stakeholder/screenshots/06-finops.png)
 
 ### Licensing & TCO
 A multi-year estimate with the formula shown, using a fictional vendor and fictional prices.
 
-![Licensing and TCO](screenshots/07-licensing-tco.png)
+![Licensing and TCO](docs/stakeholder/screenshots/07-licensing-tco.png)
 
 ### Engineering intelligence
 DORA-style measures with sample sizes and date range, and bottlenecks by team. No individual
 rankings.
 
-![Engineering intelligence](screenshots/08-engineering-intelligence.png)
+![Engineering intelligence](docs/stakeholder/screenshots/08-engineering-intelligence.png)
 
 ---
 
-## Files in this folder
+## Files (in `docs/stakeholder/`)
 
 | File | What it is | How to open |
 |------|------------|-------------|
-| `problem-statement-and-positioning.html` | Pre-read: problem, positioning, value by stakeholder, decision requested | Open in any browser |
-| `prototype/command-centre-prototype.html` | Clickable product mockup for the live demo | Open in any browser (no server or install needed) |
-| `presentation/source/` | Source of the 13-slide stakeholder deck (`deck.json` + one HTML file per slide, with speaker notes) | Edit as source; present from the online deck |
-| `presentation/` *(add the .pptx here)* | PowerPoint export of the deck | Download from the online deck, see below |
-| `screenshots/` | Prototype screenshots used in this README | Any image viewer |
+| [`problem-statement-and-positioning.html`](docs/stakeholder/problem-statement-and-positioning.html) | Pre-read: problem, positioning, value by stakeholder, decision requested | Open in any browser |
+| [`prototype/command-centre-prototype.html`](docs/stakeholder/prototype/command-centre-prototype.html) | Clickable product mockup for the live demo | Open in any browser (no server or install needed) |
+| [`presentation/source/`](docs/stakeholder/presentation/source/) | Source of the 13-slide stakeholder deck (`deck.json` + one HTML file per slide, with speaker notes) | Edit as source; present from the online deck |
+| [`presentation/`](docs/stakeholder/presentation/) *(add the .pptx here)* | PowerPoint export of the deck | Download from the online deck, see below |
+| [`screenshots/`](docs/stakeholder/screenshots/) | Prototype screenshots used in this README | Any image viewer |
 
 ### Online versions (private until shared)
 
@@ -202,9 +202,9 @@ rankings.
 
 ### Getting the PowerPoint file
 
-The slide files in `presentation/source/` use the online deck viewer's format and are not a
+The slide files in `docs/stakeholder/presentation/source/` use the online deck viewer's format and are not a
 standalone presentation. To get a `.pptx`, open the deck link above, download it as PowerPoint from
-the deck's menu, and save it as `presentation/engineering-command-centre-stakeholder-briefing.pptx`.
+the deck's menu, and save it as `docs/stakeholder/presentation/engineering-command-centre-stakeholder-briefing.pptx`.
 
 ### Suggested demo path (about 5 minutes)
 
