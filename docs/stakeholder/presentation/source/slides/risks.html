@@ -1,0 +1,16 @@
+<section id="risks" data-transition="fade" style="background:#F5F6F2;color:#0F1B2D;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;letter-spacing:3px;text-transform:uppercase;color:#B4481A">Risks</p>
+<h2 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:72px;font-weight:700;line-height:1.1;letter-spacing:-1px;color:#0F1B2D">What could go wrong, and how we contain it</h2>
+</div>
+<table style="font-family:'IBM Plex Sans', Arial, sans-serif;font-size:26px;color:#0F1B2D;border:1px solid #D5DAE0">
+<tr style="background:#0F1B2D"><th style="width:36%;color:#F5F6F2;padding:14px 20px">Risk</th><th style="width:64%;color:#F5F6F2">Mitigation</th></tr>
+<tr><td>Confident but wrong answers</td><td style="color:#42506A">Linked evidence, stated confidence, human approval, evaluation suite</td></tr>
+<tr style="background:#ECEFE9"><td>Sensitive data reaches a model</td><td style="color:#42506A">Secret redaction before any call; approved provider only</td></tr>
+<tr><td>Prompt injection via logs or tickets</td><td style="color:#42506A">Content treated as untrusted; allow-listed tools; server-side checks</td></tr>
+<tr style="background:#ECEFE9"><td>Low adoption by on-call teams</td><td style="color:#42506A">Fits the existing incident flow; FDE pairs with the on-call team</td></tr>
+<tr><td>Scope creep across ten modules</td><td style="color:#42506A">One slice first; week-8 go/no-go before any expansion</td></tr>
+</table>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#6B7890">Engineering Command Centre · 12</p>
+<aside>Invite challenge here. The biggest risk is a confident wrong answer during an incident, which is why the design never lets the agent act and always shows its evidence and its uncertainty. Ask the security lead whether any additional data-handling constraint should be added before kick-off.</aside>
+</section>

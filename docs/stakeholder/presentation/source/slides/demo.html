@@ -1,0 +1,36 @@
+<section id="demo" data-transition="fade" style="background:#0F1B2D;color:#F5F6F2;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;justify-content:space-between;gap:40px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;letter-spacing:3px;text-transform:uppercase;color:#F08A4B">Demo scenario · synthetic data</p>
+<h2 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:72px;font-weight:700;line-height:1.1;letter-spacing:-1px;color:#F5F6F2">membership-api slows down after a deploy</h2>
+</div>
+<div style="display:flex;gap:20px">
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;border-top:4px solid #3E5578;padding:24px 0 0 0">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:28px;color:#8FA0B8">14:02</p>
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:32px;font-weight:600;color:#F5F6F2">Deploy</h3>
+<p style="font-size:24px;line-height:1.45;color:#BFCAD9">Version 2.14 rolls out to membership-api</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;border-top:4px solid #3E5578;padding:24px 0 0 0">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:28px;color:#8FA0B8">14:09</p>
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:32px;font-weight:600;color:#F5F6F2">Alert</h3>
+<p style="font-size:24px;line-height:1.45;color:#BFCAD9">p95 latency climbs from 180 ms to 1.9 s</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;border-top:4px solid #3E5578;padding:24px 0 0 0">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:28px;color:#8FA0B8">14:11</p>
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:32px;font-weight:600;color:#F5F6F2">Correlate</h3>
+<p style="font-size:24px;line-height:1.45;color:#BFCAD9">Agent links the deploy, latency and a database pool at 100%</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;border-top:4px solid #F08A4B;padding:24px 0 0 0">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:28px;color:#F08A4B">14:12</p>
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:32px;font-weight:600;color:#F5F6F2">Hypothesis</h3>
+<p style="font-size:24px;line-height:1.45;color:#BFCAD9">Pool size cut in 2.14 config. Confidence: medium, 4 evidence links</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:14px;border-top:4px solid #3E5578;padding:24px 0 0 0">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:28px;color:#8FA0B8">14:15</p>
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:32px;font-weight:600;color:#F5F6F2">Approve</h3>
+<p style="font-size:24px;line-height:1.45;color:#BFCAD9">SRE approves a simulated rollback with a written reason</p>
+</div>
+</div>
+<p style="font-size:28px;line-height:1.45;color:#F5F6F2">The agent also lists what it could not establish, such as whether traffic grew at the same time, and suggests the diagnostic step that would settle it.</p>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#8FA0B8">Engineering Command Centre · 8 · Times and values are synthetic, from the prototype’s demo dataset</p>
+<aside>Switch to the clickable prototype here if time allows. Point out three things: each claim in the hypothesis links to a source record; the confidence is stated, as is what the agent could not establish; and the rollback is only a recommendation until an SRE approves it. In the prototype the rollback is simulated. Nothing touches a real system.</aside>
+</section>

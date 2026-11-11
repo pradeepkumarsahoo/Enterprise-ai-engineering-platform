@@ -1,0 +1,18 @@
+{
+  "v": 4,
+  "createdOnFiles": {"v": 1, "at": "2026-11-11T14:45:00Z"},
+  "lists": "css",
+  "title": "Engineering Command Centre — Stakeholder Briefing",
+  "order": ["cover", "problem", "pain-points", "why-now", "positioning", "how-it-works", "modules", "demo", "guardrails", "pilot", "measures", "risks", "ask"],
+  "sections": {
+    "s1": {"description": "The problem: scattered evidence, slow decisions, ungoverned AI.", "start": "cover"},
+    "s2": {"description": "The product: a governed AI layer and how it works.", "start": "positioning"},
+    "s3": {"description": "Trust, pilot plan, measures and the decision requested.", "start": "guardrails"}
+  },
+  "faces": {
+    "space-grotesk": {"family": "Space Grotesk", "href": "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&display=swap"},
+    "ibm-plex-sans": {"family": "IBM Plex Sans", "href": "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap"},
+    "jetbrains-mono": {"family": "JetBrains Mono", "href": "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap"}
+  },
+  "designSystems": []
+}
