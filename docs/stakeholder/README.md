@@ -3,6 +3,15 @@
 Materials for the stakeholder review and pilot approval of the **Engineering Command Centre**,
 a governed AI layer for the software lifecycle and production operations.
 
+**What this platform does**
+
+- **Connects** the tools engineering teams already use (monitoring, code, tickets, cloud cost,
+  security, identity) and links their data into one evidence trail.
+- **Investigates and flags** with AI agents: incidents, risky releases, capacity, DR, data and
+  access gaps, stale runbooks and unclear ownership. Every answer is backed by source records.
+- **Recommends, never acts alone.** A named person approves every consequential step, and
+  everything is recorded in an audit log.
+
 > Independently developed reference concept. All data shown is synthetic, and the prototype uses a
 > deterministic mock AI provider. Nothing here is a production outcome.
 
@@ -55,6 +64,25 @@ first two weeks rather than relying on industry figures.*
 The Command Centre is **one governed layer above the tools teams already use**. It reads their data
 through read-only adapters, connects it into a single evidence trail, uses AI to help interpret it,
 and keeps a named person accountable for every consequential action.
+
+**How it solves an engineering organisation's problems**
+
+| Problem today | What the platform does | What changes for the organisation |
+|---------------|------------------------|-----------------------------------|
+| Incidents diagnosed by hand across many tools | Correlates deploys, metrics, logs and runbooks into evidence-linked hypotheses with confidence and known gaps | Faster first diagnosis; senior engineers back on roadmap work |
+| Designs and backlogs built through meetings and copy-paste | Drafts architecture options, ADRs, NFR traceability and stories from a structured requirement | Faster project starts; residency, cost and other needs surface early |
+| Security findings without context | Ranks findings by exposure, reachability and asset tier; tracks approved exceptions | Fix effort goes to findings that can actually be exploited |
+| Cost reviewed after the fact | Flags spend anomalies with likely causes; open-formula TCO; estimated and realised savings tracked apart | Waste found while it can still be stopped; finance can trace every estimate |
+| AI tools adopted without rules | One policy, approval, audit and evaluation model shared by every agent | AI use the organisation can explain, reproduce and audit |
+| Releases judged from the diff alone | Scores each release on rule-based risk factors and similar past incidents; suggests release conditions | Fewer change failures and rollbacks |
+| Runbooks drift; lessons are lost | Checks runbooks against what responders actually did; flags repeat incidents and overdue follow-ups | The same incident stops coming back |
+| No map of owners, dependents or end-of-life software | Builds a service catalogue with blast radius and a transparent debt-priority score | Upgrade and ownership work planned, not discovered in an outage |
+| Scaling decided after slowdowns | Forecasts peaks from metrics and business calendars; shows headroom per service | Capacity in place before the peak; idle capacity released |
+| DR plans never tested | Compares recovery targets with measured drills; finds broken plan steps; drafts sandbox drills | Recovery time known and proven, not assumed |
+| API changes break other teams | Detects breaking changes, lists every consumer, drafts migration plans and notices | Cross-team breakages caught before release |
+| Bad data found by report users | Monitors pipeline freshness and quality; traces failures upstream through lineage | Data issues fixed before decisions are made on them |
+| Access granted and never removed | Continuously reviews production access: unused, standing admin and leaver grants | Smaller attack surface; audit evidence available at any time |
+| People leave, knowledge and ownership leave too | Hands over what leavers own, reconciles conflicting ownership records, drafts onboarding packs | No orphaned services; joiners productive sooner. Never used to judge individuals |
 
 **How it works**
 
