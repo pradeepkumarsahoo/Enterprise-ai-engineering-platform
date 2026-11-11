@@ -1,0 +1,47 @@
+<section id="platform-gaps" data-transition="fade" style="background:#F5F6F2;color:#0F1B2D;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;letter-spacing:3px;text-transform:uppercase;color:#B4481A">Where it hurts · platform, data and people</p>
+<h2 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:64px;font-weight:700;line-height:1.1;letter-spacing:-1px;color:#0F1B2D">Six gaps between teams, systems and people</h2>
+</div>
+<div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:20px">
+<div style="display:flex;flex-direction:column;gap:8px;background:#FCFCFA;border:1px solid #D5DAE0;border-radius:12px;padding:22px 24px">
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:28px;font-weight:600;line-height:1.15;color:#0F1B2D">Capacity planning</h3>
+<p style="font-size:21px;line-height:1.35;color:#42506A">Scaling decided after slowdowns, not from trends</p>
+<p style="font-size:21px;line-height:1.35;color:#0F1B2D"><b>Impact:</b> peak outages or over-provisioning</p>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:18px;color:#2A5DB0">Agent · capacity-planner</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;background:#FCFCFA;border:1px solid #D5DAE0;border-radius:12px;padding:22px 24px">
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:28px;font-weight:600;line-height:1.15;color:#0F1B2D">Untested disaster recovery</h3>
+<p style="font-size:21px;line-height:1.35;color:#42506A">DR plans on paper; failover never exercised</p>
+<p style="font-size:21px;line-height:1.35;color:#0F1B2D"><b>Impact:</b> unknown recovery time when it matters</p>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:18px;color:#2A5DB0">Agent · dr-readiness-checker</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;background:#FCFCFA;border:1px solid #D5DAE0;border-radius:12px;padding:22px 24px">
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:28px;font-weight:600;line-height:1.15;color:#0F1B2D">API contract breakage</h3>
+<p style="font-size:21px;line-height:1.35;color:#42506A">Producers change events without knowing who consumes them</p>
+<p style="font-size:21px;line-height:1.35;color:#0F1B2D"><b>Impact:</b> cross-team incidents that fail silently</p>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:18px;color:#2A5DB0">Agent · contract-guardian</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;background:#FCFCFA;border:1px solid #D5DAE0;border-radius:12px;padding:22px 24px">
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:28px;font-weight:600;line-height:1.15;color:#0F1B2D">Data pipeline quality</h3>
+<p style="font-size:21px;line-height:1.35;color:#42506A">Broken or late data noticed by business users first</p>
+<p style="font-size:21px;line-height:1.35;color:#0F1B2D"><b>Impact:</b> wrong reports; trust in data drops</p>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:18px;color:#2A5DB0">Agent · data-quality-tracer</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;background:#FCFCFA;border:1px solid #D5DAE0;border-radius:12px;padding:22px 24px">
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:28px;font-weight:600;line-height:1.15;color:#0F1B2D">Access sprawl</h3>
+<p style="font-size:21px;line-height:1.35;color:#42506A">Production access granted and never removed</p>
+<p style="font-size:21px;line-height:1.35;color:#0F1B2D"><b>Impact:</b> security exposure; audit findings</p>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:18px;color:#2A5DB0">Agent · access-reviewer</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;background:#FCFCFA;border:1px solid #D5DAE0;border-radius:12px;padding:22px 24px;box-shadow:inset 0 4px 0 #B4481A">
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:28px;font-weight:600;line-height:1.15;color:#0F1B2D">Joiners, leavers, ownership</h3>
+<p style="font-size:21px;line-height:1.35;color:#42506A">What leavers own, know and can access goes unnoticed</p>
+<p style="font-size:21px;line-height:1.35;color:#0F1B2D"><b>Impact:</b> orphaned services, lost knowledge</p>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:18px;color:#2A5DB0">Agent · ownership-steward</p>
+</div>
+</div>
+<p style="font-size:24px;line-height:1.45;color:#42506A">Same pattern for every agent: read-only inputs, numbers computed in code, the agent explains and drafts, a person approves.</p>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#6B7890">Engineering Command Centre · 5 · Qualitative assessment; to be validated with baseline data during the pilot</p>
+<aside>These six sit between teams rather than inside one. Capacity and DR are about being ready before the bad day. Contracts and data pipelines are about one team's change silently breaking another's. Access and ownership are about what happens when people join, move or leave. The point to land is that none of these needs a new kind of AI: each agent follows the same rules as incident investigation. It reads, code computes, the agent explains and drafts, and a named person approves. For joiners and leavers, stress that the agent looks at ownership and access only, never at individual performance. None of these are in the pilot slice.</aside>
+</section>

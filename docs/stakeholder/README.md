@@ -38,6 +38,12 @@ Where the gap shows up today:
 | Change and release risk | Releases judged from the diff alone, without dependents, test gaps or incident history | Avoidable change failures and rollbacks |
 | Runbooks and incident learning | Runbooks drift from how systems really work; post-incident actions stay open | The same incidents recur; new on-call engineers lose time |
 | Service ownership and end-of-life software | No current map of who owns a service, what depends on it, or which runtimes are past support | Unowned services and unplanned upgrade work |
+| Capacity and performance planning | Scaling decisions made after slowdowns, not from trends | Peak-time outages or over-provisioning |
+| Disaster recovery that is never tested | DR plans exist on paper; failover is not exercised | Unknown recovery time when it matters |
+| API and contract breakage between teams | Producers change events or APIs without knowing who consumes them | Cross-team incidents that fail silently |
+| Data pipeline quality | Broken or late data is noticed by business users first | Wrong reports and decisions; trust in data drops |
+| Access and permissions sprawl | Production access is granted and never removed | Security exposure; audit findings |
+| Joiners, leavers and fragmented ownership | Ownership is recorded differently in four places; when people leave or move, what they own, know and can access goes unnoticed | Orphaned services, lost knowledge and leftover access; slow onboarding |
 
 *Qualitative assessment from discovery conversations. The pilot measures a real baseline in its
 first two weeks rather than relying on industry figures.*
@@ -86,21 +92,44 @@ evaluations, data provenance)
 | Command centre | KPIs, each traced to the records it was calculated from |
 | Production support | Evidence-backed incident investigation and post-incident reports |
 | Knowledge & runbooks | Runbook drift checked against real incidents, repeat-incident detection, overdue post-incident actions |
+| Capacity planning | Peak forecasts from metrics and the promotions calendar; headroom per service; scaling proposals |
+| Resilience & DR | Recovery targets vs. measured drill results; broken plan steps; sandbox DR drills |
 | Architecture & ADLC | Proposals, ADRs and NFR traceability from a structured requirement |
 | Developer assistant | Scaffolds, test suggestions and PR review, shown as diffs for approval |
 | Change risk | Pre-deploy risk score from rule-based factors, similar past incidents and suggested release conditions |
+| API contracts | Breaking-change detection on events and APIs, affected consumers, migration plan |
 | Jira & delivery | Backlog generation, sprint risk, blocked and ageing work, release notes |
 | Chaos engineering | Sandbox-only experiments with abort rules and SLO comparison |
+| Data pipelines | Freshness, volume and quality checks; failures traced upstream through lineage |
 | Licensing & TCO | Multi-year estimates with open formulas and editable prices |
 | FinOps | Cost anomalies and recommendations; estimated and realised savings kept apart |
 | Security | Findings prioritised by exposure and reachability; exceptions approved and tracked |
 | Service catalogue | Ownership, dependencies and end-of-life runtimes, with a transparent debt-priority formula |
+| Access review | Continuous review of production access: unused, standing-admin and leaver grants |
+| Joiners & leavers | Ownership handover for leavers and movers, conflicting ownership records, onboarding packs for joiners |
 | Engineering intelligence | DORA-style measures at team level, never used to rank individuals |
 
 **Built-in guardrails:** evidence before conclusions; permissions, money and state changes handled
 by plain code and policy rather than the model; secrets redacted before any model call; logs,
 tickets and code treated as untrusted input so they cannot override policy; synthetic, imported and
 AI-generated data labelled as such.
+
+**How AI agents handle these use cases**
+
+Every agent follows the same pattern: it reads through read-only adapters, the numbers come from
+plain code and rules, the agent explains and drafts, and a person decides anything consequential.
+
+| Use case | Agent | Reads (read-only) | What the agent does | What a person decides |
+|----------|-------|-------------------|---------------------|-----------------------|
+| Capacity planning | `capacity-planner` | Metrics, promotions calendar, service catalogue | Explains the forecast (computed in code), names the first constraint, drafts scaling proposals, lists unknowns | Platform team approves any scaling change; their pipeline applies it |
+| Disaster recovery | `dr-readiness-checker` | DR plans, drill records, change records | Finds untested plans and steps that reference retired infrastructure; drafts a corrected sandbox drill | SRE approves the drill; it runs through Chaos engineering |
+| API contracts | `contract-guardian` | Schema registry, API specs, service catalogue, traces | Explains breaking changes found by rules, lists affected consumers, drafts the migration plan and notices | Producer team approves sending notices; consumers own their migration |
+| Data pipelines | `data-quality-tracer` | Pipeline runs, lineage, change records | Traces a failed check upstream to a likely cause, with evidence and confidence; drafts the notice to report owners | Data platform approves notices and reruns |
+| Access sprawl | `access-reviewer` | Identity provider, cloud IAM, CI/CD access logs, HR feed | Writes the reason for each recommended removal; risk is set by rules | Identity team approves and applies; the agent never grants or removes access |
+| Joiners, leavers and ownership | `ownership-steward` | HR feed (dates only), service catalogue, repository history, on-call, cost tags | Lists what a leaver owns, proposes new owners, drafts handover notes, reconciles conflicting ownership records, drafts onboarding packs | The leaver reviews notes; the manager approves new owners; the team lead approves joiner access |
+
+The joiner and leaver agent looks at ownership, knowledge and access only. It never measures
+individual performance.
 
 ---
 
@@ -131,6 +160,10 @@ Outcomes expected as the platform extends beyond the pilot slice:
 - **On-call engineers** — runbooks kept in line with what responders actually do, and repeat
   incidents surfaced with their open follow-up actions.
 - **Service owners** — a current view of ownership, dependents and runtimes nearing end of support.
+- **Platform teams** — capacity shortfalls found weeks before a peak, and DR plans proved by drills.
+- **Data and analytics teams** — broken pipelines caught and traced before report users notice.
+- **Engineering managers** — clean handovers when people leave, and faster onboarding for joiners.
+- **Security and identity teams** — production access that shrinks back after people move or leave.
 
 **Proposed pilot:** eight weeks, read-only, incident investigation on [2–3 services] in shadow mode,
 with a go/no-go review at week 8.
@@ -215,6 +248,47 @@ dependency data is missing.
 
 ![Service catalogue](screenshots/11-service-catalogue.png)
 
+### Capacity planning
+Peak readiness for a double-points weekend. The forecast is computed in code from 13 weeks of
+metrics and the promotions calendar; `loyalty-ledger` is 31% short of write capacity. The agent
+explains the forecast, lists what it could not establish, and drafts a scaling proposal for approval.
+
+![Capacity planning](screenshots/12-capacity-planning.png)
+
+### Resilience & DR
+Recovery targets compared with measured drill results. Two tier-0/1 services have never been
+drilled, and the `loyalty-ledger` plan restores from a backup vault retired in July. The agent drafts
+a corrected sandbox drill that runs through Chaos engineering.
+
+![Resilience and DR](screenshots/13-resilience-dr.png)
+
+### API contracts
+A rename in the `PointsAccrued` event is caught before release. Four consumers are affected; one
+would break silently and one has unknown usage. The agent drafts a migration plan and the notices
+to consumer teams.
+
+![API contracts](screenshots/14-api-contracts.png)
+
+### Data pipelines
+A finance report's source pipeline lost 38% of its rows. The agent traces it through lineage to a
+skipped regional extract after a credential rotation, and drafts the notice to report owners.
+
+![Data pipelines](screenshots/15-data-pipelines.png)
+
+### Access review
+Production access reviewed continuously: a leaver with live database access, an ownerless admin
+service account, a team mover's old deploy rights and standing admin grants. Rules set the risk,
+the agent writes the reason, and the identity team applies any removal.
+
+![Access review](screenshots/16-access-review.png)
+
+### Joiners & leavers
+A leaver's handover: code, runbooks, jobs, alert routes and pending approvals, each with a proposed
+new owner. Ownership records that disagree across four sources are reconciled, and a joiner gets
+an onboarding pack and a practice incident.
+
+![Joiners and leavers](screenshots/17-joiners-leavers.png)
+
 ---
 
 ## Files in this folder
@@ -223,7 +297,7 @@ dependency data is missing.
 |------|------------|-------------|
 | `problem-statement-and-positioning.html` | Pre-read: problem, positioning, value by stakeholder, decision requested | Open in any browser |
 | `prototype/command-centre-prototype.html` | Clickable product mockup for the live demo | Open in any browser (no server or install needed) |
-| `presentation/source/` | Source of the 14-slide stakeholder deck (`deck.json` + one HTML file per slide, with speaker notes) | Edit as source; present from the online deck |
+| `presentation/source/` | Source of the 15-slide stakeholder deck (`deck.json` + one HTML file per slide, with speaker notes) | Edit as source; present from the online deck |
 | `presentation/` *(add the .pptx here)* | PowerPoint export of the deck | Download from the online deck, see below |
 | `screenshots/` | Prototype screenshots used in this README | Any image viewer |
 
@@ -257,6 +331,17 @@ Optional extension (about 3 minutes), for engineering and platform leads:
    recurred three times. Show the draft edit going to the owning team for review.
 8. **Service catalogue**: `notification-worker` has no owner and runs on an unsupported runtime.
    Show the blast radius and the "could not establish" note.
+
+Optional platform and people extension (about 4 minutes), for platform, data, security and
+engineering-management leads:
+
+9. **API contracts**: the same `loyalty-ledger` release renames an event field. Show the consumer
+   that would break silently, and the drafted migration notice.
+10. **Capacity planning** and **Resilience & DR**: the ledger is short of capacity for the next
+    peak and its DR plan has never been drilled. Request the sandbox drill.
+11. **Access review** and **Joiners & leavers**: a leaver still has database access; another leaver's
+    services, runbooks and approvals get proposed new owners. Point out that the agent never changes
+    access itself.
 
 ### Before presenting
 

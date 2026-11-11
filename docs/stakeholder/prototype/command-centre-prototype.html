@@ -272,9 +272,10 @@ ul.clean { margin: 0; padding-left: 18px; display: flex; flex-direction: column;
 
   /* ---------- Navigation ---------- */
   const NAV = [
-    ['Operate', [['overview', 'Overview'], ['incident', 'Production support'], ['knowledge', 'Knowledge & runbooks'], ['chaos', 'Chaos engineering']]],
-    ['Build', [['architecture', 'Architecture & ADLC'], ['developer', 'Developer assistant'], ['changes', 'Change risk'], ['delivery', 'Jira & delivery']]],
+    ['Operate', [['overview', 'Overview'], ['incident', 'Production support'], ['knowledge', 'Knowledge & runbooks'], ['capacity', 'Capacity planning'], ['dr', 'Resilience & DR'], ['chaos', 'Chaos engineering'], ['datapipes', 'Data pipelines']]],
+    ['Build', [['architecture', 'Architecture & ADLC'], ['developer', 'Developer assistant'], ['changes', 'Change risk'], ['contracts', 'API contracts'], ['delivery', 'Jira & delivery']]],
     ['Cost & risk', [['licensing', 'Licensing & TCO'], ['finops', 'FinOps'], ['security', 'Security'], ['catalogue', 'Service catalogue'], ['insights', 'Engineering intelligence']]],
+    ['People & access', [['access', 'Access review'], ['people', 'Joiners & leavers']]],
     ['Govern', [['agents', 'Agent management'], ['evaluations', 'Evaluations'], ['approvals', 'Approvals'], ['audit', 'Audit log'], ['integrations', 'Integrations']]],
   ];
   const TITLES = Object.fromEntries(NAV.flatMap((g) => g[1]));
@@ -734,6 +735,12 @@ total = Σ cost(year 1..${state.tco.years})   price source: sample catalogue, 20
       <tr><td>pr-reviewer</td><td class="mono">1.1</td><td>Dev productivity</td><td class="mono hint">diff.read, standards.search</td><td class="num">47</td><td><span class="badge b-ok">Active</span></td></tr>
       <tr><td>change-risk-assessor</td><td class="mono">0.6</td><td>Release engineering</td><td class="mono hint">diff.read, deploys.list, incidents.search, coverage.read</td><td class="num">19</td><td><span class="badge b-ok">Active</span></td></tr>
       <tr><td>runbook-curator</td><td class="mono">0.3</td><td>SRE</td><td class="mono hint">runbooks.search, incidents.search</td><td class="num">9</td><td><span class="badge b-warn">Evaluation only</span></td></tr>
+      <tr><td>capacity-planner</td><td class="mono">0.5</td><td>Platform</td><td class="mono hint">metrics.query, calendar.read, catalogue.read</td><td class="num">14</td><td><span class="badge b-warn">Evaluation only</span></td></tr>
+      <tr><td>dr-readiness-checker</td><td class="mono">0.4</td><td>SRE</td><td class="mono hint">drills.list, dr_plans.read, changes.search</td><td class="num">6</td><td><span class="badge b-warn">Evaluation only</span></td></tr>
+      <tr><td>contract-guardian</td><td class="mono">0.7</td><td>Platform</td><td class="mono hint">schemas.diff, catalogue.read, traces.query</td><td class="num">22</td><td><span class="badge b-ok">Active</span></td></tr>
+      <tr><td>data-quality-tracer</td><td class="mono">0.4</td><td>Data platform</td><td class="mono hint">pipelines.runs, lineage.read, changes.search</td><td class="num">17</td><td><span class="badge b-warn">Evaluation only</span></td></tr>
+      <tr><td>access-reviewer</td><td class="mono">0.6</td><td>Security</td><td class="mono hint">iam.read, access_logs.query, hr.read</td><td class="num">11</td><td><span class="badge b-ok">Active</span></td></tr>
+      <tr><td>ownership-steward</td><td class="mono">0.3</td><td>Engineering ops</td><td class="mono hint">catalogue.read, repo.history, hr.read, oncall.read</td><td class="num">8</td><td><span class="badge b-warn">Evaluation only</span></td></tr>
       <tr><td>finops-analyst</td><td class="mono">0.4</td><td>FinOps</td><td class="mono hint">costs.query</td><td class="num">25</td><td><span class="badge b-warn">Evaluation only</span></td></tr>
     </table></div></div>`;
 
@@ -744,6 +751,8 @@ total = Σ cost(year 1..${state.tco.years})   price source: sample catalogue, 20
       <tr><td>Prompt injection</td><td class="num">25</td><td>Tool policy held</td><td class="num">25 / 25</td><td class="num">25 / 25</td><td><span class="badge b-ok">Pass</span></td></tr>
       <tr><td>TCO arithmetic</td><td class="num">60</td><td>Exact match</td><td class="num">60 / 60</td><td class="num">60 / 60</td><td><span class="badge b-ok">Pass</span></td></tr>
       <tr><td>Change risk</td><td class="num">30</td><td>Risky changes flagged (recall)</td><td class="num">0.70</td><td class="num">0.83</td><td><span class="badge b-ok">Pass</span></td></tr>
+      <tr><td>Contract breaks</td><td class="num">45</td><td>Breaking changes detected</td><td class="num">40 / 45</td><td class="num">45 / 45</td><td><span class="badge b-ok">Pass</span></td></tr>
+      <tr><td>Access review</td><td class="num">50</td><td>Revocations agreed by reviewer</td><td class="num">—</td><td class="num">44 / 50</td><td><span class="badge b-warn">Review</span></td></tr>
       <tr><td>FinOps anomalies</td><td class="num">90</td><td>Precision / recall</td><td class="num">0.82 / 0.76</td><td class="num">0.80 / 0.81</td><td><span class="badge b-warn">Review</span></td></tr>
     </table></div></div>`;
 
@@ -751,6 +760,186 @@ total = Σ cost(year 1..${state.tco.years})   price source: sample catalogue, 20
     <div class="panel"><div class="scroll-x"><table class="t"><tr><th>Integration</th><th>Mode</th><th>Credentials</th><th>Notes</th></tr>
       ${[['Jira Cloud', 'Local simulator'], ['GitHub', 'Seeded pull requests'], ['AWS Cost Explorer', 'Sample CSV'], ['Azure Cost Management', 'Sample CSV'], ['Prometheus / Grafana', 'Telemetry simulator'], ['ServiceNow', 'Local incident store'], ['LLM provider', 'Deterministic mock']].map(([n, note]) => `<tr><td>${n}</td><td><span class="badge b-mock">Mock</span></td><td class="hint">Not configured</td><td class="hint">${note}</td></tr>`).join('')}
     </table></div></div>`;
+
+  V.capacity = () => `${head('Capacity planning', 'Peak readiness · double-points weekend, Dec 6–7', 'Forecasts are computed in code from 13 weeks of metrics and the promotions calendar. The agent explains them and drafts scaling proposals; it changes nothing.', '<span class="badge b-syn">Synthetic telemetry</span>')}
+    <div class="grid g-4">
+      <div class="panel kpi"><span class="label">Forecast peak · loyalty-ledger</span><span class="value">3.4k rps</span><span class="delta up-bad">2.6× a normal weekly peak</span><span class="src">from 13 weeks of metrics + promotions calendar</span></div>
+      <div class="panel kpi"><span class="label">Services short of capacity</span><span class="value">2 of 12</span><span class="delta up-bad">headroom under 15% at forecast peak</span><span class="src">tier-0 and tier-1 only</span></div>
+      <div class="panel kpi"><span class="label">Over-provisioned</span><span class="value">4</span><span class="delta">CPU p95 under 25% for 30 days</span><span class="src">shared with FinOps</span></div>
+      <div class="panel kpi"><span class="label">Cost of proposals</span><span class="value">+$2.1k</span><span class="delta">offset by −$3.6k rightsizing</span><span class="src">monthly · estimate</span></div>
+    </div>
+    <div class="grid g-main">
+      <div class="panel">
+        <div class="panel-h"><h2>loyalty-ledger · weekly peak requests</h2><span class="src">thousand rps · W38 to forecast</span></div>
+        ${lineChart({ labels: ['W38', '', 'W40', '', 'W42', '', 'W44', '', 'W46', '', ''], series: [{ data: [1.2, 1.25, 1.22, 2.3, 1.3, 1.28, 1.32, 1.3, 1.35, 1.4, 3.4], color: 'var(--accent)', area: true, limit: 2.6 }], yMax: 4, yTicks: [0, 1, 2, 3, 4], markers: [{ i: 9, label: 'forecast' }], h: 200 })}
+        <div class="legend"><span><i style="background:var(--accent)"></i>Weekly peak; last point is the Dec 6 forecast</span><span>Dashed line: current capacity 2.6k rps (DB write IOPS)</span></div>
+        <div class="scroll-x"><table class="t"><tr><th>Service</th><th>Capacity</th><th>Forecast peak</th><th>Headroom</th><th>Constraint</th><th>Proposal</th></tr>
+          <tr><td>loyalty-ledger</td><td class="num">2.6k</td><td class="num">3.4k</td><td><span class="badge b-crit">−31%</span></td><td>DB write IOPS</td><td>Write replicas 3 → 5 by Dec 4</td></tr>
+          <tr><td>promotion-engine</td><td class="num">4.0k</td><td class="num">3.6k</td><td><span class="badge b-warn">10%</span></td><td>Autoscaler max 12 pods</td><td>Raise max to 18</td></tr>
+          <tr><td>membership-api</td><td class="num">3.0k</td><td class="num">2.1k</td><td><span class="badge b-ok">30%</span></td><td>DB pool (restored to 50)</td><td>None</td></tr>
+          <tr><td>inventory-service</td><td class="num">2.0k</td><td class="num">0.6k</td><td><span class="badge b-neutral">70% · over</span></td><td>—</td><td>Rightsize nodes</td></tr>
+        </table></div>
+        <div class="formula">forecast = seasonal baseline × promotion uplift (last event, scaled by region share)
+headroom = (capacity − forecast) ÷ capacity   · computed in code</div>
+      </div>
+      <div class="panel">
+        <div class="panel-h"><h2>Agent summary</h2><span class="badge b-accent">Needs review</span></div>
+        <p>The last double-points event (W41) was EU-only and peaked at 2.3k rps. This one covers all regions, so the uplift is scaled by region share. loyalty-ledger runs out of write capacity first; promotion-engine hits its pod limit about 40 minutes later.</p>
+        <div><b>Could not establish</b><ul class="clean unknown"><li>Partner traffic. partner-gateway has no history for a promotion event.</li><li>Whether the mobile push at 09:00 will be staggered by region.</li></ul></div>
+        <div><button class="btn btn-primary" data-toast="Scaling proposal queued for approval (capacity.change.request). The platform team pipeline applies it, not the agent.">Request scaling change</button></div>
+        <p class="note">Over-provisioned services are shared with FinOps as rightsizing recommendations.</p>
+      </div>
+    </div>`;
+
+  V.dr = () => `${head('Resilience & DR', 'Disaster recovery readiness', 'Recovery targets come from the service catalogue. Measured times come only from recorded drills, so a plan that has never been run shows as untested, not as compliant.', '<span class="badge b-syn">Synthetic drill records</span>')}
+    <div class="grid g-4">
+      <div class="panel kpi"><span class="label">Tier-0 and tier-1 services</span><span class="value">12</span><span class="delta">each needs a yearly drill</span><span class="src">from service catalogue</span></div>
+      <div class="panel kpi"><span class="label">Drilled in last 12 months</span><span class="value">5 of 12</span><span class="delta up-bad">7 untested or stale</span><span class="src">from drill records</span></div>
+      <div class="panel kpi"><span class="label">Met recovery-time target</span><span class="value">3 of 5</span><span class="delta up-bad">in the last drill</span><span class="src">measured, not estimated</span></div>
+      <div class="panel kpi"><span class="label">Plans with broken steps</span><span class="value">2</span><span class="delta up-bad">reference retired infrastructure</span><span class="src">checked against change records</span></div>
+    </div>
+    <div class="grid g-main">
+      <div class="panel">
+        <div class="panel-h"><h2>Recovery readiness</h2><span class="sub">RTO = time to recover · RPO = data loss allowed</span></div>
+        <div class="scroll-x"><table class="t"><tr><th>Service</th><th>RTO target</th><th>Last drill</th><th>Measured</th><th>RPO target / actual</th><th>Status</th></tr>
+          <tr><td>loyalty-ledger</td><td class="num">15 min</td><td>Never</td><td class="num">—</td><td class="num">0 / —</td><td><span class="badge b-crit">Untested</span></td></tr>
+          <tr><td>partner-gateway</td><td class="num">60 min</td><td>Never</td><td class="num">—</td><td class="num">15 min / —</td><td><span class="badge b-crit">Untested</span></td></tr>
+          <tr><td>membership-api</td><td class="num">15 min</td><td>Aug 14</td><td class="num">22 min</td><td class="num">0 / 0</td><td><span class="badge b-warn">Missed RTO</span></td></tr>
+          <tr><td>promotion-engine</td><td class="num">60 min</td><td>Mar 2</td><td class="num">38 min</td><td class="num">5 / 3 min</td><td><span class="badge b-ok">Meets</span></td></tr>
+          <tr><td>notification-worker</td><td class="num">4 h</td><td>15 mo ago</td><td class="num">3 h 10 min</td><td class="num">1 h / 40 min</td><td><span class="badge b-warn">Stale</span></td></tr>
+        </table></div>
+        <div class="comment"><b>Broken step · DR-LED-01.</b> The loyalty-ledger plan restores from <code>backup-vault-eu1</code>, which was retired in July (CHG-2091). Step 4 would fail during a real recovery.</div>
+      </div>
+      <div class="panel">
+        <div class="panel-h"><h2>Proposed drill</h2><span class="badge b-syn">Sandbox only</span></div>
+        <div class="scroll-x"><table class="t"><tr><th>Setting</th><th>Value</th></tr>
+          <tr><td>Target</td><td>loyalty-ledger · sandbox replica</td></tr><tr><td>Scenario</td><td>Primary region lost; fail over to secondary</td></tr>
+          <tr><td>Window</td><td>30 min, hard stop 45 min</td></tr><tr><td>Abort if</td><td>replication lag &gt; 60 s, or kill switch</td></tr>
+          <tr><td>Measures</td><td>Recovery time, data loss, steps that failed</td></tr></table></div>
+        <p class="hint">Drafted by the agent from the DR plan, with step 4 corrected to the current backup vault. The drill runs through the Chaos engineering module.</p>
+        <div><button class="btn btn-primary" data-toast="Drill request queued for approval (dr.drill.run). Runs in sandbox through Chaos engineering.">Request DR drill</button></div>
+      </div>
+    </div>`;
+
+  V.contracts = () => `${head('API contracts', 'Breaking-change check · PointsAccrued v3', 'Contracts come from the schema registry and API specs; consumers from the service catalogue and 7 days of traces. Rules detect breaking changes; the agent drafts the migration plan and notices.', '<span class="badge b-syn">Seeded schema registry</span>')}
+    <div class="grid g-4">
+      <div class="panel kpi"><span class="label">Published contracts</span><span class="value">58</span><span class="delta">events and APIs</span><span class="src">from schema registry + API specs</span></div>
+      <div class="panel kpi"><span class="label">Breaking changes proposed</span><span class="value">1</span><span class="delta up-bad">in loyalty-ledger v3.8</span><span class="src">rule: rename or remove field</span></div>
+      <div class="panel kpi"><span class="label">Consumers affected</span><span class="value">4</span><span class="delta up-bad">1 with unknown usage</span><span class="src">from catalogue + traces</span></div>
+      <div class="panel kpi"><span class="label">Contracts with consumer tests</span><span class="value">41%</span><span class="delta">24 of 58</span><span class="src">from CI test registry</span></div>
+    </div>
+    <div class="grid g-main">
+      <div class="panel">
+        <div class="panel-h"><h2>points_accrued.proto</h2><span class="src">v2 → v3</span></div>
+        <div class="diff">
+          <div class="ctx">  message PointsAccrued {</div>
+          <div class="ctx">    string member_id = 1;</div>
+          <div class="del">-   int64  pts       = 3;</div>
+          <div class="add">+   int64  points    = 3;   // renamed</div>
+          <div class="add">+   string expiry_at = 7;   // new, optional</div>
+          <div class="ctx">  }</div>
+        </div>
+        <div class="comment"><b>Breaking · field rename.</b> Consumers that read <code>pts</code> will get 0 without an error, so the failure would show up as wrong points totals, not as an exception.</div>
+        <div class="scroll-x"><table class="t"><tr><th>Consumer</th><th>Owner</th><th>Reads pts</th><th>Contract test</th><th>Impact</th></tr>
+          <tr><td>promotion-engine</td><td>Loyalty</td><td>Yes</td><td>Yes</td><td><span class="badge b-crit">Test fails</span></td></tr>
+          <tr><td>notification-worker</td><td><span class="badge b-crit">No owner</span></td><td>Yes</td><td>No</td><td><span class="badge b-crit">Breaks silently</span></td></tr>
+          <tr><td>partner-gateway</td><td>Commerce</td><td>Unknown</td><td>No</td><td><span class="badge b-warn">Unknown</span></td></tr>
+          <tr><td>membership-api</td><td>Membership & Identity</td><td>No</td><td>Yes</td><td><span class="badge b-ok">Safe</span></td></tr>
+        </table></div>
+      </div>
+      <div class="panel">
+        <div class="panel-h"><h2>Suggested migration</h2><span class="badge b-accent">Draft</span></div>
+        <ul class="clean"><li>Publish v3 alongside v2 and write both</li><li>Move consumers to v3, owner by owner</li><li>Add a contract test for partner-gateway</li><li>Retire v2 after 30 days with zero reads</li></ul>
+        <div><b>Could not establish</b><ul class="clean unknown"><li>Which version partner-gateway reads. It sends no traces and has no consumer test.</li></ul></div>
+        <div><button class="btn btn-primary" data-toast="Migration notice drafted for 3 owning teams. Sending needs producer-team approval (contracts.notice.send).">Draft notice to consumers</button></div>
+        <p class="note">Also feeds the Change risk score for loyalty-ledger v3.8 (factor C3).</p>
+      </div>
+    </div>`;
+
+  V.datapipes = () => `${head('Data pipelines', 'Data quality and freshness', 'Checks run in code against the pipeline catalogue: freshness, volume, schema and null rates. The agent traces failures upstream and drafts the notice to the people who use the data.', '<span class="badge b-syn">Synthetic pipeline runs</span>')}
+    <div class="grid g-4">
+      <div class="panel kpi"><span class="label">Pipelines monitored</span><span class="value">37</span><span class="delta">412 quality checks</span><span class="src">from pipeline catalogue</span></div>
+      <div class="panel kpi"><span class="label">Late or failed today</span><span class="value">3</span><span class="delta up-bad">1 feeds a finance report</span><span class="src">from 37 run records</span></div>
+      <div class="panel kpi"><span class="label">Checks failing</span><span class="value">5</span><span class="delta">of 412</span><span class="src">rules in code</span></div>
+      <div class="panel kpi"><span class="label">Reports affected</span><span class="value">2</span><span class="delta up-bad">owners not yet told</span><span class="src">from lineage graph</span></div>
+    </div>
+    <div class="grid g-main">
+      <div class="panel">
+        <div class="panel-h"><h2>Pipeline health</h2><span class="sub">detected before report users notice</span></div>
+        <div class="scroll-x"><table class="t"><tr><th>Pipeline</th><th>Owner</th><th>Due</th><th>Check failed</th><th>Feeds</th><th>Status</th></tr>
+          <tr><td>points_liability_daily</td><td>Data platform</td><td class="mono">06:00</td><td>Row count −38% vs 28-day median</td><td>Finance points-liability report</td><td><span class="badge b-crit">Failed</span></td></tr>
+          <tr><td>campaign_attribution</td><td>Loyalty analytics</td><td class="mono">hourly</td><td>Last success 3 h ago</td><td>Campaign dashboard</td><td><span class="badge b-warn">Late</span></td></tr>
+          <tr><td>member_profile_snapshot</td><td>Membership</td><td class="mono">04:00</td><td>Null <code>country</code> 12% (limit 1%)</td><td>Segmentation</td><td><span class="badge b-warn">Failing</span></td></tr>
+          <tr><td>ledger_events_raw</td><td>Data platform</td><td class="mono">15 min</td><td>—</td><td>9 pipelines</td><td><span class="badge b-ok">Healthy</span></td></tr>
+        </table></div>
+        <h2 style="font-size:15px">Lineage · points_liability_daily</h2>
+        <div class="arch">
+          <div class="box"><b>loyalty-ledger</b>source database</div>
+          <div class="box"><b>ledger_extract_eu2</b>skipped 02:10</div>
+          <div class="box"><b>points_liability_daily</b>row count −38%</div>
+          <div class="box"><b>Finance report</b>due 08:00</div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-h"><h2>Traced upstream</h2><span class="badge b-accent">Medium-high · 0.78</span></div>
+        <p>The drop matches one missing region. <code>ledger_extract_eu2</code> skipped its 02:10 run after a credential rotation (CHG-2233); EU-2 accounts for 37% of ledger rows.</p>
+        <div><b>Could not establish</b><ul class="clean unknown"><li>Whether the campaign_attribution delay has the same cause. It uses a different credential.</li></ul></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary" data-toast="Data-incident notice to 2 report owners queued for approval (data.notice.send).">Notify report owners</button><button class="btn" data-toast="Rerun request queued for the data platform on-call (pipeline.rerun.request).">Request rerun</button></div>
+        <p class="note">The finance report is marked “data incomplete” until the rerun succeeds.</p>
+      </div>
+    </div>`;
+
+  V.access = () => `${head('Access review', 'Production access, reviewed continuously', 'Grants are read from the identity provider, cloud IAM and CI/CD tools (read-only); usage comes from their audit logs. The agent recommends removals; the identity team approves and applies them.', '<span class="badge b-syn">Synthetic IAM export</span>')}
+    <div class="grid g-4">
+      <div class="panel kpi"><span class="label">Principals with prod access</span><span class="value">86</span><span class="delta">people and service accounts</span><span class="src">from 3 identity sources</span></div>
+      <div class="panel kpi"><span class="label">Unused for 90 days</span><span class="value">23</span><span class="delta up-bad">27% of grants</span><span class="src">from access logs</span></div>
+      <div class="panel kpi"><span class="label">Standing admin grants</span><span class="value">9</span><span class="delta up-bad">policy says just-in-time only</span><span class="src">policy AC-04</span></div>
+      <div class="panel kpi"><span class="label">Leavers with live access</span><span class="value">2</span><span class="delta up-bad">left 11 and 4 days ago</span><span class="src">from HR feed (read-only)</span></div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><h2>Recommended changes</h2><span class="sub">ranked by risk · rules decide the risk, the agent writes the reason</span></div>
+      <div class="scroll-x"><table class="t"><tr><th>Principal</th><th>Situation</th><th>Access</th><th>Last used</th><th>Recommendation</th><th>Risk</th></tr>
+        <tr><td class="mono">j.ortiz@demo</td><td>Left Oct 31</td><td>loyalty prod DB read/write</td><td>2 days before exit</td><td>Revoke now</td><td><span class="badge b-crit">Critical</span></td></tr>
+        <tr><td class="mono">svc-batch-legacy</td><td>Service account, no owner</td><td>Cloud admin</td><td>211 days ago</td><td>Disable, then delete after 30 days</td><td><span class="badge b-crit">Critical</span></td></tr>
+        <tr><td class="mono">k.lee@demo</td><td>Moved team in Sep</td><td>membership-api deploy</td><td>74 days ago</td><td>Remove; no longer on team</td><td><span class="badge b-warn">High</span></td></tr>
+        <tr><td class="mono">platform-admins</td><td>Group, 9 members</td><td>Standing prod admin</td><td>Daily</td><td>Move to just-in-time elevation</td><td><span class="badge b-warn">High</span></td></tr>
+        <tr><td class="mono">oncall-loyalty</td><td>On-call group</td><td>Break-glass prod</td><td>INC-1039</td><td>Keep; already time-limited</td><td><span class="badge b-ok">OK</span></td></tr>
+      </table></div>
+      <div class="row" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button class="btn btn-primary" data-toast="Revocation of 3 grants queued for approval (access.revoke.request). The identity team applies it; the next sync confirms.">Request revocation (3)</button><span class="hint">The agent never grants or removes access itself.</span></div>
+      <div><b>Could not establish</b><ul class="clean unknown"><li>Last-used dates for 2 CI/CD tools, which do not export access logs. Their grants are listed but not ranked.</li></ul></div>
+    </div>`;
+
+  V.people = () => `${head('Joiners & leavers', 'Ownership handover and onboarding', 'Join, move and leave dates come from the HR system (read-only). The agent looks at what people own, know and can access, never at individual performance.', '<span class="badge b-syn">Synthetic HR feed</span>')}
+    <div class="grid g-4">
+      <div class="panel kpi"><span class="label">Leaving or moving in 30 days</span><span class="value">3</span><span class="delta">2 leavers, 1 team move</span><span class="src">from HR feed</span></div>
+      <div class="panel kpi"><span class="label">Items to hand over</span><span class="value">41</span><span class="delta up-bad">12 without a proposed owner</span><span class="src">services, runbooks, alerts, jobs</span></div>
+      <div class="panel kpi"><span class="label">Single-maintainer areas</span><span class="value">6</span><span class="delta up-bad">one person made &gt; 80% of changes</span><span class="src">12 months of repository history</span></div>
+      <div class="panel kpi"><span class="label">Ownership records that disagree</span><span class="value">9</span><span class="delta">catalogue, code owners, on-call, cost tags</span><span class="src">from 4 sources</span></div>
+    </div>
+    <div class="grid g-main">
+      <div class="panel">
+        <div class="panel-h"><h2>Handover · R. Mendes, Loyalty, leaves Nov 29</h2><span class="badge b-warn">18 days left</span></div>
+        <div class="scroll-x"><table class="t"><tr><th>Item</th><th>Type</th><th>Proposed owner</th><th>Basis</th><th>Status</th></tr>
+          <tr><td>Ledger replay tooling</td><td>Code · 92% authored</td><td>P. Nair</td><td>Reviewed 14 of 31 changes</td><td><span class="badge b-warn">Proposed</span></td></tr>
+          <tr><td>RB-052 Ledger replay after outage</td><td>Runbook</td><td>P. Nair</td><td>Same area</td><td><span class="badge b-crit">Needs a drill</span></td></tr>
+          <tr><td>ledger-snapshot-cleanup</td><td>Scheduled job</td><td>Loyalty team</td><td>Team rota</td><td><span class="badge b-ok">Accepted</span></td></tr>
+          <tr><td>ledger_lag_high</td><td>Alert route</td><td>On-call loyalty</td><td>Rotation</td><td><span class="badge b-ok">Accepted</span></td></tr>
+          <tr><td>APR-2041</td><td>Pending approval</td><td>Reassign</td><td>Approver leaving</td><td><span class="badge b-warn">Open</span></td></tr>
+        </table></div>
+        <p class="note">Handover notes are drafted from code history, ADRs and incident timelines. R. Mendes reviews them before anyone else sees them. Access removal on exit goes through Access review.</p>
+        <div><button class="btn btn-primary" data-toast="Owner proposals sent to the Loyalty engineering manager for approval (ownership.assign).">Send proposals to manager</button></div>
+      </div>
+      <div class="panel">
+        <div class="panel-h"><h2>Fragmented ownership</h2><span class="sub">9 services</span></div>
+        <div class="scroll-x"><table class="t"><tr><th>Source</th><th>partner-gateway owner</th></tr>
+          <tr><td>Service catalogue</td><td>Commerce</td></tr><tr><td>Code owners file</td><td>Platform</td></tr>
+          <tr><td>On-call rotation</td><td>Commerce</td></tr><tr><td>Cost tag</td><td><span class="badge b-crit">Missing</span></td></tr></table></div>
+        <p class="hint">Suggested single owner: Commerce (3 of 4 signals, plus 71% of recent changes).</p>
+        <div class="panel-h"><h2>Joiner · A. Chen, Loyalty, Dec 1</h2></div>
+        <ul class="clean"><li>Onboarding pack: 4 services, 6 runbooks, 3 ADRs</li><li>3 low-risk first tickets with good docs</li><li>On-call shadow from week 4, INC-1042 replay as practice</li><li>Role-based access request, approved by the team lead</li></ul>
+        <div><button class="btn" data-toast="Onboarding pack drafted for the team lead to review (onboarding.pack.draft).">Draft onboarding pack</button></div>
+      </div>
+    </div>`;
 
   /* ---------- Router ---------- */
   function route() {

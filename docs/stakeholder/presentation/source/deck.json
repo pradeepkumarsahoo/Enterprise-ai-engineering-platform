@@ -3,7 +3,7 @@
   "createdOnFiles": {"v": 1, "at": "2026-11-11T14:45:00Z"},
   "lists": "css",
   "title": "Engineering Command Centre — Stakeholder Briefing",
-  "order": ["cover", "problem", "pain-points", "engineering-gaps", "why-now", "positioning", "how-it-works", "modules", "demo", "guardrails", "pilot", "measures", "risks", "ask"],
+  "order": ["cover", "problem", "pain-points", "engineering-gaps", "platform-gaps", "why-now", "positioning", "how-it-works", "modules", "demo", "guardrails", "pilot", "measures", "risks", "ask"],
   "sections": {
     "s1": {"description": "The problem: scattered evidence, slow decisions, ungoverned AI.", "start": "cover"},
     "s2": {"description": "The product: a governed AI layer and how it works.", "start": "positioning"},

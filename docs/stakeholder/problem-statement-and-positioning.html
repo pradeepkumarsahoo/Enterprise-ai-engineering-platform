@@ -125,7 +125,7 @@ td:first-child { color: var(--ink); font-weight: 600; }
   <section>
     <div class="wrap stack">
       <div class="eyebrow">Where it shows up</div>
-      <h2>Eight places the gap costs us</h2>
+      <h2>Fourteen places the gap costs us</h2>
       <div class="tbl-wrap"><table>
         <tr><th style="width:22%">Area</th><th style="width:42%">What happens today</th><th>Business impact</th></tr>
         <tr><td>Production support</td><td>On-call engineers correlate logs, deploys and dashboards by hand</td><td>Longer outages; senior staff pulled off roadmap work</td></tr>
@@ -136,6 +136,12 @@ td:first-child { color: var(--ink); font-weight: 600; }
         <tr><td>Change and release risk</td><td>Releases judged from the diff alone, without dependents, test gaps or incident history</td><td>Avoidable change failures and rollbacks</td></tr>
         <tr><td>Runbooks and incident learning</td><td>Runbooks drift from how systems really work; post-incident actions stay open</td><td>The same incidents recur; new on-call engineers lose time</td></tr>
         <tr><td>Service ownership and end-of-life software</td><td>No current map of who owns a service, what depends on it, or which runtimes are past support</td><td>Unowned services and unplanned upgrade work</td></tr>
+        <tr><td>Capacity and performance planning</td><td>Scaling decisions made after slowdowns, not from trends</td><td>Peak-time outages or over-provisioning</td></tr>
+        <tr><td>Disaster recovery that is never tested</td><td>DR plans exist on paper; failover is not exercised</td><td>Unknown recovery time when it matters</td></tr>
+        <tr><td>API and contract breakage</td><td>Producers change events or APIs without knowing who consumes them</td><td>Cross-team incidents that fail silently</td></tr>
+        <tr><td>Data pipeline quality</td><td>Broken or late data is noticed by business users first</td><td>Wrong reports and decisions; trust in data drops</td></tr>
+        <tr><td>Access and permissions sprawl</td><td>Production access is granted and never removed</td><td>Security exposure; audit findings</td></tr>
+        <tr><td>Joiners, leavers and fragmented ownership</td><td>Ownership recorded differently in four places; what leavers own, know and can access goes unnoticed</td><td>Orphaned services, lost knowledge, leftover access; slow onboarding</td></tr>
       </table></div>
       <p style="font-size:14px;color:var(--muted)">Qualitative assessment from discovery conversations. The pilot measures a baseline in its first two weeks instead of relying on industry figures.</p>
     </div>
@@ -196,6 +202,9 @@ td:first-child { color: var(--ink); font-weight: 600; }
         <div class="card"><span class="k">Release and platform teams</span><h3>Safer releases</h3><p>Risky changes flagged before deploy, with the weighted factors and past incidents behind the score.</p></div>
         <div class="card"><span class="k">On-call engineers</span><h3>Runbooks that match reality</h3><p>Drift checked against real incidents; repeat causes surfaced with their open follow-up actions.</p></div>
         <div class="card"><span class="k">Service owners</span><h3>A current service map</h3><p>Ownership, dependents and runtimes nearing end of support, ranked by an open formula.</p></div>
+        <div class="card"><span class="k">Platform teams</span><h3>Ready for the next peak</h3><p>Capacity shortfalls found weeks ahead, and DR plans proved by sandbox drills rather than assumed.</p></div>
+        <div class="card"><span class="k">Data and integration teams</span><h3>Breaks caught early</h3><p>Breaking API changes and failed pipelines traced to a cause before consumers or report users notice.</p></div>
+        <div class="card"><span class="k">Managers and identity teams</span><h3>Clean joins and exits</h3><p>Handovers with proposed owners, onboarding packs, and production access that shrinks back. Never used to judge individuals.</p></div>
       </div>
     </div>
   </section>
