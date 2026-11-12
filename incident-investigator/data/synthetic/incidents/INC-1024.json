@@ -1,0 +1,98 @@
+{
+  "incident": {
+    "id": "INC-1024",
+    "service": "partner-gateway",
+    "title": "All partner calls failing",
+    "severity": "SEV2",
+    "opened_at": "2026-10-14T00:09:00Z",
+    "owner_team": "Commerce",
+    "alert": {
+      "rule": "error rate > 2% for 5 min",
+      "metric": "error_rate_pct"
+    }
+  },
+  "sources": {
+    "deploys": [],
+    "metrics": {
+      "error_rate_pct": {
+        "start": "2026-10-13T23:51:00Z",
+        "step_s": 120,
+        "unit": "%",
+        "values": [
+          0.2,
+          0.2,
+          0.2,
+          0.2,
+          0.2,
+          0.2,
+          98.53,
+          99.4,
+          98.94,
+          98.93,
+          98.28,
+          99.45,
+          98.92,
+          99.24,
+          99.09,
+          97.72
+        ]
+      },
+      "request_rate_rps": {
+        "start": "2026-10-13T23:51:00Z",
+        "step_s": 120,
+        "unit": "rps",
+        "values": [
+          404.34,
+          409.57,
+          413.85,
+          415.63,
+          407.49,
+          417.89,
+          406.75,
+          397.47,
+          398.25,
+          409.37,
+          398.23,
+          402.77,
+          402.32,
+          411.03,
+          402.91,
+          401.77
+        ]
+      },
+      "p95_latency_ms": {
+        "start": "2026-10-13T23:51:00Z",
+        "step_s": 120,
+        "unit": "ms",
+        "values": [
+          195.62,
+          204.98,
+          197.43,
+          204.38,
+          195.09,
+          203.84,
+          34.2,
+          35.38,
+          35.13,
+          35.42,
+          34.81,
+          34.0,
+          35.69,
+          35.86,
+          34.47,
+          35.84
+        ]
+      }
+    },
+    "logs": [
+      {
+        "at": "2026-10-14T00:03:00Z",
+        "level": "ERROR",
+        "count": 22100,
+        "message": "TLS handshake failed: x509: certificate has expired or is not yet valid (client cert CN=partner-gateway)"
+      }
+    ],
+    "flag_changes": [],
+    "dependency_status": []
+  }
+}

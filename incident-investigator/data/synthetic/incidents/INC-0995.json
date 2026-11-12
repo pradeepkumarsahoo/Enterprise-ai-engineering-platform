@@ -1,0 +1,137 @@
+{
+  "incident": {
+    "id": "INC-0995",
+    "service": "promotion-engine",
+    "title": "Latency and 5xx during campaign launch",
+    "severity": "SEV3",
+    "opened_at": "2026-08-22T18:03:00Z",
+    "owner_team": "Loyalty",
+    "alert": {
+      "rule": "p95 > 500 ms for 5 min",
+      "metric": "p95_latency_ms"
+    }
+  },
+  "sources": {
+    "deploys": [
+      {
+        "id": "deploy-7802",
+        "service": "promotion-engine",
+        "version_from": "v4.1",
+        "version_to": "v4.2",
+        "at": "2026-08-20T18:03:00Z",
+        "change_summary": "Rule cache metrics",
+        "config_diff": []
+      }
+    ],
+    "metrics": {
+      "p95_latency_ms": {
+        "start": "2026-08-22T17:45:00Z",
+        "step_s": 120,
+        "unit": "ms",
+        "values": [
+          117.71,
+          118.47,
+          122.25,
+          118.18,
+          119.54,
+          117.18,
+          645.52,
+          650.99,
+          634.2,
+          646.46,
+          649.25,
+          629.24,
+          653.37,
+          646.11,
+          654.14,
+          652.89
+        ]
+      },
+      "request_rate_rps": {
+        "start": "2026-08-22T17:45:00Z",
+        "step_s": 120,
+        "unit": "rps",
+        "values": [
+          1120.74,
+          1078.34,
+          1106.7,
+          1077.45,
+          1114.76,
+          1131.62,
+          2984.58,
+          3122.01,
+          3130.63,
+          3035.11,
+          3095.16,
+          2995.65,
+          3090.04,
+          2973.68,
+          3122.95,
+          3031.78
+        ]
+      },
+      "cpu_utilisation_pct": {
+        "start": "2026-08-22T17:45:00Z",
+        "step_s": 120,
+        "unit": "%",
+        "values": [
+          47.04,
+          47.26,
+          48.07,
+          47.43,
+          48.82,
+          48.24,
+          97.08,
+          97.03,
+          96.4,
+          96.99,
+          95.94,
+          95.84,
+          97.12,
+          96.64,
+          97.5,
+          94.2
+        ]
+      },
+      "error_rate_pct": {
+        "start": "2026-08-22T17:45:00Z",
+        "step_s": 120,
+        "unit": "%",
+        "values": [
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          1.84,
+          1.83,
+          1.8,
+          1.82,
+          1.81,
+          1.75,
+          1.83,
+          1.78,
+          1.85,
+          1.76
+        ]
+      }
+    },
+    "logs": [
+      {
+        "at": "2026-08-22T17:59:00Z",
+        "level": "WARN",
+        "count": 9,
+        "message": "HorizontalPodAutoscaler promotion-engine at max replicas (12)"
+      },
+      {
+        "at": "2026-08-22T17:57:00Z",
+        "level": "INFO",
+        "count": 1,
+        "message": "Campaign 'Summer double points' push notification sent to 2.1M members"
+      }
+    ],
+    "flag_changes": [],
+    "dependency_status": []
+  }
+}

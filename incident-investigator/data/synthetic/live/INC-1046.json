@@ -1,0 +1,105 @@
+{
+  "incident": {
+    "id": "INC-1046",
+    "service": "promotion-engine",
+    "title": "Rule evaluation errors after rules-db failover",
+    "severity": "SEV3",
+    "opened_at": "2026-11-12T10:37:00Z",
+    "owner_team": "Loyalty",
+    "alert": {
+      "rule": "error rate > 2% for 5 min",
+      "metric": "error_rate_pct"
+    }
+  },
+  "sources": {
+    "deploys": [],
+    "metrics": {
+      "error_rate_pct": {
+        "start": "2026-11-12T10:19:00Z",
+        "step_s": 120,
+        "unit": "%",
+        "values": [
+          0.2,
+          0.2,
+          0.2,
+          0.2,
+          0.2,
+          0.2,
+          12.75,
+          12.77,
+          12.61,
+          12.26,
+          12.18,
+          12.32,
+          12.68,
+          12.52,
+          12.56,
+          12.43
+        ]
+      },
+      "dependency_error_rate_pct": {
+        "start": "2026-11-12T10:19:00Z",
+        "step_s": 120,
+        "unit": "%",
+        "values": [
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          30.93,
+          30.34,
+          30.38,
+          31.49,
+          31.84,
+          30.28,
+          31.65,
+          31.7,
+          30.81,
+          30.79
+        ]
+      },
+      "request_rate_rps": {
+        "start": "2026-11-12T10:19:00Z",
+        "step_s": 120,
+        "unit": "rps",
+        "values": [
+          1012.3,
+          1015.11,
+          991.02,
+          1029.0,
+          1023.25,
+          997.64,
+          986.13,
+          993.19,
+          1000.24,
+          997.85,
+          988.82,
+          1007.98,
+          989.88,
+          985.92,
+          1000.37,
+          1018.18
+        ]
+      }
+    },
+    "logs": [
+      {
+        "at": "2026-11-12T10:31:00Z",
+        "level": "ERROR",
+        "count": 5120,
+        "message": "rules-db: connection reset by peer during failover"
+      }
+    ],
+    "flag_changes": [],
+    "dependency_status": [
+      {
+        "dependency": "rules-db",
+        "status": "failover in progress",
+        "at": "2026-11-12T10:29:00Z",
+        "note": "Planned primary failover took longer than expected"
+      }
+    ]
+  }
+}

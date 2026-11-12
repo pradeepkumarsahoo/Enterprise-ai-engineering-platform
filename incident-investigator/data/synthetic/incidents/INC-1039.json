@@ -1,0 +1,116 @@
+{
+  "incident": {
+    "id": "INC-1039",
+    "service": "promotion-engine",
+    "title": "Elevated 5xx on bonus rule evaluation",
+    "severity": "SEV3",
+    "opened_at": "2026-11-10T11:26:00Z",
+    "owner_team": "Loyalty",
+    "alert": {
+      "rule": "error rate > 2% for 5 min",
+      "metric": "error_rate_pct"
+    }
+  },
+  "sources": {
+    "deploys": [
+      {
+        "id": "deploy-8601",
+        "service": "promotion-engine",
+        "version_from": "v4.6",
+        "version_to": "v4.7",
+        "at": "2026-11-10T10:28:00Z",
+        "change_summary": "Ship rules_v2 evaluator behind flag (off)",
+        "config_diff": []
+      }
+    ],
+    "metrics": {
+      "error_rate_pct": {
+        "start": "2026-11-10T11:08:00Z",
+        "step_s": 120,
+        "unit": "%",
+        "values": [
+          0.2,
+          0.2,
+          0.2,
+          0.19,
+          0.2,
+          0.2,
+          7.28,
+          6.96,
+          6.96,
+          6.95,
+          6.93,
+          7.05,
+          6.9,
+          7.11,
+          7.21,
+          7.0
+        ]
+      },
+      "request_rate_rps": {
+        "start": "2026-11-10T11:08:00Z",
+        "step_s": 120,
+        "unit": "rps",
+        "values": [
+          991.6,
+          996.05,
+          989.08,
+          991.99,
+          973.1,
+          975.88,
+          1008.31,
+          982.01,
+          998.16,
+          1004.59,
+          974.41,
+          981.19,
+          973.48,
+          1003.64,
+          1000.24,
+          974.45
+        ]
+      },
+      "p95_latency_ms": {
+        "start": "2026-11-10T11:08:00Z",
+        "step_s": 120,
+        "unit": "ms",
+        "values": [
+          131.08,
+          126.69,
+          131.98,
+          126.55,
+          131.41,
+          126.7,
+          153.74,
+          148.55,
+          153.07,
+          145.54,
+          145.5,
+          146.25,
+          147.41,
+          153.03,
+          152.12,
+          147.75
+        ]
+      }
+    },
+    "logs": [
+      {
+        "at": "2026-11-10T11:20:00Z",
+        "level": "ERROR",
+        "count": 3480,
+        "message": "NullPointerException in BonusRuleEvaluator.evaluate (rules_v2 path)"
+      }
+    ],
+    "flag_changes": [
+      {
+        "at": "2026-11-10T11:18:00Z",
+        "flag": "bonus_rules_v2",
+        "from": "off",
+        "to": "on (100%)",
+        "by": "release-bot"
+      }
+    ],
+    "dependency_status": []
+  }
+}

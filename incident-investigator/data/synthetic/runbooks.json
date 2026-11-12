@@ -1,0 +1,127 @@
+[
+  {
+    "id": "RB-017",
+    "title": "Database connection pool exhaustion",
+    "services": [
+      "membership-api",
+      "loyalty-ledger"
+    ],
+    "keywords": [
+      "pool",
+      "connection is not available",
+      "hikari",
+      "timed out"
+    ],
+    "steps": [
+      "Check pool maximum against previous release",
+      "Look for slow queries holding connections",
+      "Restore pool size through a reviewed config change"
+    ]
+  },
+  {
+    "id": "RB-023",
+    "title": "Slow query investigation",
+    "services": [
+      "loyalty-ledger",
+      "order-service"
+    ],
+    "keywords": [
+      "slow query",
+      "query",
+      "index"
+    ],
+    "steps": [
+      "Find the slowest statements",
+      "Check the query plan for missing indexes",
+      "Roll back the change or add the index"
+    ]
+  },
+  {
+    "id": "RB-031",
+    "title": "Event bus and queue backlog",
+    "services": [
+      "notification-worker"
+    ],
+    "keywords": [
+      "queue",
+      "backlog",
+      "consumer lag"
+    ],
+    "steps": [
+      "Check downstream provider status",
+      "Pause non-critical sends",
+      "Scale consumers only if the provider is healthy"
+    ]
+  },
+  {
+    "id": "RB-038",
+    "title": "Traffic surge and autoscaling limits",
+    "services": [
+      "promotion-engine",
+      "membership-api"
+    ],
+    "keywords": [
+      "autoscaler",
+      "max replicas",
+      "traffic",
+      "campaign"
+    ],
+    "steps": [
+      "Confirm traffic source (campaign, bot, retry storm)",
+      "Raise autoscaler maximum within quota",
+      "Enable load shedding for non-critical calls"
+    ]
+  },
+  {
+    "id": "RB-044",
+    "title": "Feature flag rollback",
+    "services": [
+      "promotion-engine"
+    ],
+    "keywords": [
+      "flag",
+      "feature",
+      "rollout"
+    ],
+    "steps": [
+      "Identify flags changed before onset",
+      "Turn the flag off for affected cohort",
+      "Confirm error rate recovers"
+    ]
+  },
+  {
+    "id": "RB-047",
+    "title": "Memory growth and OOM kills",
+    "services": [
+      "partner-gateway"
+    ],
+    "keywords": [
+      "oomkilled",
+      "memory",
+      "cache",
+      "heap"
+    ],
+    "steps": [
+      "Confirm memory growth pattern",
+      "Check caches and buffers without limits",
+      "Restart as mitigation; fix the leak"
+    ]
+  },
+  {
+    "id": "RB-052",
+    "title": "Certificate renewal",
+    "services": [
+      "partner-gateway"
+    ],
+    "keywords": [
+      "x509",
+      "certificate",
+      "tls"
+    ],
+    "steps": [
+      "Identify the expired certificate",
+      "Rotate through the certificate pipeline",
+      "Add expiry alerting at 30 days"
+    ]
+  }
+]

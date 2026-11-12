@@ -1,0 +1,160 @@
+{
+  "incident": {
+    "id": "INC-1019",
+    "service": "partner-gateway",
+    "title": "Repeated pod restarts and 5xx",
+    "severity": "SEV3",
+    "opened_at": "2026-10-06T13:30:00Z",
+    "owner_team": "Commerce",
+    "alert": {
+      "rule": "error rate > 2% for 5 min",
+      "metric": "error_rate_pct"
+    }
+  },
+  "sources": {
+    "deploys": [
+      {
+        "id": "deploy-8190",
+        "service": "partner-gateway",
+        "version_from": "v1.11",
+        "version_to": "v1.12",
+        "at": "2026-09-30T13:30:00Z",
+        "change_summary": "Add partner response caching",
+        "config_diff": []
+      }
+    ],
+    "metrics": {
+      "memory_mb": {
+        "start": "2026-10-06T13:12:00Z",
+        "step_s": 120,
+        "unit": "MB",
+        "values": [
+          1436.5,
+          1480.8,
+          1537.1,
+          1566.3,
+          1623.0,
+          1662.9,
+          1676.8,
+          1735.4,
+          1757.4,
+          1799.5,
+          1835.5,
+          1872.3,
+          1906.8,
+          1967.3,
+          1997.0,
+          2027.1
+        ]
+      },
+      "memory_limit_mb": {
+        "start": "2026-10-06T13:12:00Z",
+        "step_s": 120,
+        "unit": "MB",
+        "values": [
+          2048.0,
+          2048.0,
+          2048.0,
+          2048.0,
+          2048.0,
+          2048.0,
+          2048.0,
+          2048.0,
+          2048.0,
+          2048.0,
+          2048.0,
+          2048.0,
+          2048.0,
+          2048.0,
+          2048.0,
+          2048.0
+        ]
+      },
+      "error_rate_pct": {
+        "start": "2026-10-06T13:12:00Z",
+        "step_s": 120,
+        "unit": "%",
+        "values": [
+          0.2,
+          0.2,
+          0.2,
+          0.2,
+          0.2,
+          0.2,
+          4.63,
+          4.51,
+          4.61,
+          4.57,
+          4.6,
+          4.58,
+          4.71,
+          4.49,
+          4.54,
+          4.49
+        ]
+      },
+      "request_rate_rps": {
+        "start": "2026-10-06T13:12:00Z",
+        "step_s": 120,
+        "unit": "rps",
+        "values": [
+          418.02,
+          425.52,
+          420.12,
+          423.06,
+          413.39,
+          424.18,
+          412.59,
+          416.65,
+          414.46,
+          417.41,
+          417.0,
+          419.19,
+          423.86,
+          418.02,
+          411.71,
+          423.4
+        ]
+      },
+      "p95_latency_ms": {
+        "start": "2026-10-06T13:12:00Z",
+        "step_s": 120,
+        "unit": "ms",
+        "values": [
+          213.49,
+          205.58,
+          209.71,
+          204.37,
+          215.0,
+          211.67,
+          258.96,
+          252.86,
+          263.66,
+          265.72,
+          267.56,
+          257.64,
+          261.88,
+          262.73,
+          259.65,
+          266.9
+        ]
+      }
+    },
+    "logs": [
+      {
+        "at": "2026-10-06T13:26:00Z",
+        "level": "ERROR",
+        "count": 7,
+        "message": "Container partner-gateway terminated: OOMKilled (exit code 137)"
+      },
+      {
+        "at": "2026-10-06T13:26:00Z",
+        "level": "WARN",
+        "count": 33,
+        "message": "Response cache size 1.2M entries; no eviction policy configured"
+      }
+    ],
+    "flag_changes": [],
+    "dependency_status": []
+  }
+}

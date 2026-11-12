@@ -1,0 +1,167 @@
+{
+  "incident": {
+    "id": "INC-0987",
+    "service": "membership-api",
+    "title": "p95 latency up after deploy v2.9",
+    "severity": "SEV2",
+    "opened_at": "2026-08-04T09:14:00Z",
+    "owner_team": "Membership & Identity",
+    "alert": {
+      "rule": "p95 > 800 ms for 5 min",
+      "metric": "p95_latency_ms"
+    }
+  },
+  "sources": {
+    "deploys": [
+      {
+        "id": "deploy-7741",
+        "service": "membership-api",
+        "version_from": "v2.8",
+        "version_to": "v2.9",
+        "at": "2026-08-04T09:06:00Z",
+        "change_summary": "Tune datasource settings; bump client library",
+        "config_diff": [
+          {
+            "file": "application-prod.yaml",
+            "key": "hikari.maximum-pool-size",
+            "from": "40",
+            "to": "15"
+          }
+        ]
+      }
+    ],
+    "metrics": {
+      "p95_latency_ms": {
+        "start": "2026-08-04T08:56:00Z",
+        "step_s": 120,
+        "unit": "ms",
+        "values": [
+          170.33,
+          170.29,
+          171.29,
+          174.91,
+          165.22,
+          167.75,
+          1682.12,
+          1607.9,
+          1666.5,
+          1669.57,
+          1621.9,
+          1667.5,
+          1612.96,
+          1685.59,
+          1651.06,
+          1693.94
+        ]
+      },
+      "request_rate_rps": {
+        "start": "2026-08-04T08:56:00Z",
+        "step_s": 120,
+        "unit": "rps",
+        "values": [
+          1083.61,
+          1079.78,
+          1082.0,
+          1099.69,
+          1100.83,
+          1081.66,
+          1116.82,
+          1108.28,
+          1095.92,
+          1116.13,
+          1094.64,
+          1105.71,
+          1091.75,
+          1127.65,
+          1113.03,
+          1119.97
+        ]
+      },
+      "db_pool_active": {
+        "start": "2026-08-04T08:56:00Z",
+        "step_s": 120,
+        "unit": "connections",
+        "values": [
+          28.37,
+          27.21,
+          27.53,
+          27.03,
+          29.25,
+          29.24,
+          15.75,
+          15.39,
+          15.13,
+          14.8,
+          14.35,
+          14.38,
+          15.05,
+          15.63,
+          14.48,
+          15.71
+        ]
+      },
+      "db_pool_max": {
+        "start": "2026-08-04T08:56:00Z",
+        "step_s": 120,
+        "unit": "connections",
+        "values": [
+          40.0,
+          40.0,
+          40.0,
+          40.0,
+          40.0,
+          40.0,
+          15.0,
+          15.0,
+          15.0,
+          15.0,
+          15.0,
+          15.0,
+          15.0,
+          15.0,
+          15.0,
+          15.0
+        ]
+      },
+      "error_rate_pct": {
+        "start": "2026-08-04T08:56:00Z",
+        "step_s": 120,
+        "unit": "%",
+        "values": [
+          0.2,
+          0.2,
+          0.2,
+          0.2,
+          0.2,
+          0.2,
+          3.13,
+          3.19,
+          3.05,
+          3.16,
+          3.06,
+          3.13,
+          3.06,
+          3.16,
+          3.05,
+          3.07
+        ]
+      }
+    },
+    "logs": [
+      {
+        "at": "2026-08-04T09:10:00Z",
+        "level": "ERROR",
+        "count": 812,
+        "message": "HikariPool-1 - Connection is not available, request timed out after 30000ms"
+      },
+      {
+        "at": "2026-08-04T09:12:00Z",
+        "level": "WARN",
+        "count": 64,
+        "message": "Slow request /v1/members/{id} 2140ms"
+      }
+    ],
+    "flag_changes": [],
+    "dependency_status": []
+  }
+}

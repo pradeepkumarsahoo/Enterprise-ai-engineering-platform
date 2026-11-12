@@ -1,0 +1,121 @@
+{
+  "incident": {
+    "id": "INC-1003",
+    "service": "notification-worker",
+    "title": "Queue backlog, SMS sends failing",
+    "severity": "SEV3",
+    "opened_at": "2026-09-02T07:51:00Z",
+    "owner_team": "Platform",
+    "alert": {
+      "rule": "queue depth > 50k for 5 min",
+      "metric": "queue_depth"
+    }
+  },
+  "sources": {
+    "deploys": [
+      {
+        "id": "deploy-7950",
+        "service": "notification-worker",
+        "version_from": "v1.20",
+        "version_to": "v1.21",
+        "at": "2026-09-02T04:51:00Z",
+        "change_summary": "Template copy changes",
+        "config_diff": []
+      }
+    ],
+    "metrics": {
+      "queue_depth": {
+        "start": "2026-09-02T07:33:00Z",
+        "step_s": 120,
+        "unit": "messages",
+        "values": [
+          1199.81,
+          1189.92,
+          1215.99,
+          1196.16,
+          1196.64,
+          1165.87,
+          7405.9,
+          13739.81,
+          19981.47,
+          25669.2,
+          32199.21,
+          38503.56,
+          46249.52,
+          52110.82,
+          59100.49,
+          62206.71
+        ]
+      },
+      "dependency_error_rate_pct": {
+        "start": "2026-09-02T07:33:00Z",
+        "step_s": 120,
+        "unit": "%",
+        "values": [
+          0.3,
+          0.3,
+          0.29,
+          0.3,
+          0.3,
+          0.29,
+          63.59,
+          62.2,
+          63.0,
+          65.52,
+          63.56,
+          63.11,
+          65.58,
+          65.37,
+          63.06,
+          63.72
+        ]
+      },
+      "request_rate_rps": {
+        "start": "2026-09-02T07:33:00Z",
+        "step_s": 120,
+        "unit": "rps",
+        "values": [
+          296.37,
+          303.17,
+          299.45,
+          303.24,
+          303.05,
+          295.6,
+          300.56,
+          307.95,
+          309.53,
+          301.11,
+          309.37,
+          301.37,
+          303.06,
+          306.67,
+          300.72,
+          305.13
+        ]
+      }
+    },
+    "logs": [
+      {
+        "at": "2026-09-02T07:45:00Z",
+        "level": "ERROR",
+        "count": 18420,
+        "message": "sms-gateway POST /v2/send returned 503 Service Unavailable"
+      },
+      {
+        "at": "2026-09-02T07:49:00Z",
+        "level": "DEBUG",
+        "count": 1,
+        "message": "retry config loaded sms_api_password=Tr0ub4dor&3 backoff=exp"
+      }
+    ],
+    "flag_changes": [],
+    "dependency_status": [
+      {
+        "dependency": "sms-gateway",
+        "status": "degraded",
+        "at": "2026-09-02T07:45:00Z",
+        "note": "Provider reports elevated errors in EU region"
+      }
+    ]
+  }
+}

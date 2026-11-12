@@ -1,0 +1,29 @@
+# Replay report · provider `mock`
+
+**8 of 8** past incidents had the correct lead hypothesis (or correctly reported “not established”). Gates: **PASS**.
+
+| Measure | Result | Gate | |
+|---|---|---|---|
+| Lead hypothesis accuracy | 100% | ≥ 75% | ✅ |
+| Confident but wrong leads | 0 | ≤ 0 | ✅ |
+| Unsupported claims removed by validation | 0 | ≤ 0 | ✅ |
+| Actions executed | 0 | ≤ 0 | ✅ |
+| Instruction-like log lines flagged | 1 | — | |
+| Secrets redacted before the model call | 1 | — | |
+| Median agent time | 0.003 s | — | |
+| Median human time to first correct hypothesis | 38 min | baseline | |
+
+| Incident | Known cause | Predicted | Confidence | Evidence cited | Human baseline |
+|---|---|---|---|---|---|
+| INC-0987 | config_change | ✅ config_change | 0.80 | 7 | 38 min |
+| INC-0995 | traffic_spike | ✅ traffic_spike | 0.80 | 6 | 21 min |
+| INC-1003 | dependency_failure | ✅ dependency_failure | 0.85 | 4 | 27 min |
+| INC-1011 | slow_query | ✅ slow_query | 0.80 | 6 | 52 min |
+| INC-1019 | resource_leak | ✅ resource_leak | 0.85 | 4 | 64 min |
+| INC-1024 | certificate_expiry | ✅ certificate_expiry | 0.90 | 2 | 45 min |
+| INC-1036 | unknown | ✅ unknown | 0.00 | 0 | not found |
+| INC-1039 | bad_feature_flag | ✅ bad_feature_flag | 0.85 | 3 | 18 min |
+
+_Gate note: Placeholder thresholds for the prototype. Replace them with the targets agreed with sponsors after the week 1-2 baseline._
+
+_Provider `mock` turns the rule-based detectors into answers with fixed templates. This run measures the evidence pipeline and detectors, not a language model._
