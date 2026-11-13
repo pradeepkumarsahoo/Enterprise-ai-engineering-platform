@@ -1,3 +1,4 @@
+# Author: Pradeep Sahoo
 """Deterministic detectors: rule-based candidate causes with a prior score.
 
 These run before any model call. They make the system useful and testable with

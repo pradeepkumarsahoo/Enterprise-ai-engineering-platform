@@ -1,0 +1,30 @@
+{
+  "_meta": {
+    "author": "Pradeep Sahoo",
+    "generated_by": "scripts/generate_synthetic_data.py",
+    "synthetic": true
+  },
+  "services": {
+    "membership-api": {
+      "current_version": "v2.14",
+      "removed": [
+        {
+          "name": "MAX_POOL",
+          "removed_in": "v2.11",
+          "replaced_by": "hikari.maximum-pool-size",
+          "where": "application-prod.yaml, changed through a reviewed config change"
+        }
+      ]
+    },
+    "loyalty-ledger": {
+      "current_version": "v3.8",
+      "removed": [
+        {
+          "name": "backup-vault-eu1",
+          "removed_in": "CHG-2091",
+          "replaced_by": "backup-vault-eu2"
+        }
+      ]
+    }
+  }
+}

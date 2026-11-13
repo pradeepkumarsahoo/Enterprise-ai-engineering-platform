@@ -1,3 +1,5 @@
+# Author: Pradeep Sahoo
+"""Tests for use case 1: incident investigation (replay, shadow, providers, safety)."""
 import json
 import shutil
 from pathlib import Path
@@ -20,8 +22,8 @@ from investigator.validate import validate
 
 HOME = Path(__file__).resolve().parents[1]
 DATA = HOME / "data" / "synthetic"
-LABELS = json.loads((DATA / "labels.json").read_text(encoding="utf-8"))
-GATES = json.loads((HOME / "config" / "pilot_gates.json").read_text(encoding="utf-8"))
+LABELS = json.loads((DATA / "labels.json").read_text(encoding="utf-8"))["labels"]
+GATES = json.loads((HOME / "config" / "pilot_gates.json").read_text(encoding="utf-8"))["incident_investigation"]
 
 
 # ------------------------------------------------------------------ safety

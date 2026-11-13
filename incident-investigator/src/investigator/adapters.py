@@ -1,3 +1,4 @@
+# Author: Pradeep Sahoo
 """Read-only data adapters.
 
 The investigator only talks to sources through `IncidentSource`. Every method is
@@ -72,9 +73,15 @@ class FixtureSource:
         return list(self._src.get("dependency_status", []))
 
 
+def load_runbooks(path: Path) -> list[dict]:
+    """Read runbooks.json ({"_meta": ..., "runbooks": [...]}; a bare list is also accepted)."""
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    return data["runbooks"] if isinstance(data, dict) else data
+
+
 class FixtureRunbooks:
     def __init__(self, path: Path):
-        self._books = json.loads(Path(path).read_text(encoding="utf-8"))
+        self._books = load_runbooks(path)
 
     def search(self, service: str, text: str) -> list[dict]:
         text = text.lower()

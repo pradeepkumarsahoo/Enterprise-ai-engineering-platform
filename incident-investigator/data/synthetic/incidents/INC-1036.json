@@ -1,4 +1,9 @@
 {
+  "_meta": {
+    "author": "Pradeep Sahoo",
+    "generated_by": "scripts/generate_synthetic_data.py",
+    "synthetic": true
+  },
   "incident": {
     "id": "INC-1036",
     "service": "order-service",

@@ -1,3 +1,4 @@
+# Author: Pradeep Sahoo
 """Plain data types shared across the investigator."""
 from __future__ import annotations
 

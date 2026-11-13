@@ -1,3 +1,4 @@
+# Author: Pradeep Sahoo
 """Treat operational text as untrusted data.
 
 Two jobs, both done in code before anything reaches a model:

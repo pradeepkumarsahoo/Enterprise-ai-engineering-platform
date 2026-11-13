@@ -1,4 +1,9 @@
-"""Command line: investigate | replay | shadow run | shadow feedback | shadow report."""
+# Author: Pradeep Sahoo
+"""Command line for both use cases.
+
+Use case 1 (incident investigation): investigate | replay | shadow run | shadow feedback | shadow report
+Use case 2 (knowledge & runbooks):   knowledge run | knowledge evaluate | knowledge feedback | knowledge report
+"""
 from __future__ import annotations
 
 import argparse
@@ -32,7 +37,7 @@ def cmd_investigate(a) -> int:
 def cmd_replay(a) -> int:
     from .replay import run
     out = Path(a.out) if a.out else RUNS / "replay" / f"{a.provider}-{_stamp()}"
-    gates = json.loads(Path(a.gates).read_text(encoding="utf-8"))
+    gates = json.loads(Path(a.gates).read_text(encoding="utf-8"))["incident_investigation"]
     result = run(Path(a.incidents), Path(a.labels), Path(a.runbooks), get_provider(a.provider), out, gates)
     print((out / "report.md").read_text(encoding="utf-8"))
     print(f"Full results: {out}")
@@ -60,6 +65,48 @@ def cmd_shadow_feedback(a) -> int:
 
 def cmd_shadow_report(a) -> int:
     print(json.dumps(_shadow(a).report(), indent=2))
+    return 0
+
+
+def _kb(a):
+    from .knowledge import KnowledgeBase
+    return KnowledgeBase.load(Path(a.runbooks), Path(a.knowledge_dir))
+
+
+def cmd_knowledge_run(a) -> int:
+    from .knowledge import get_drafter
+    from .knowledge.review import run
+    result = run(_kb(a), get_drafter(a.provider), Path(a.workdir))
+    print(f"As of {result['as_of']}: {len(result['findings'])} findings, {len(result['repeats'])} repeat cluster(s), "
+          f"{len(result['overdue'])} overdue action(s), {len(result['edits'])} drafted edit(s), "
+          f"{len(result['rejected_edits'])} rejected by validation.")
+    print(f"Review queue: {Path(a.workdir) / 'review-queue'}  (nothing was changed in the runbook wiki)")
+    return 0
+
+
+def cmd_knowledge_evaluate(a) -> int:
+    from .knowledge import get_drafter
+    from .knowledge.review import evaluate, run
+    out = Path(a.workdir)
+    result = run(_kb(a), get_drafter(a.provider), out)
+    labels = json.loads((Path(a.knowledge_dir) / "labels.json").read_text(encoding="utf-8"))
+    gates = json.loads(Path(a.gates).read_text(encoding="utf-8"))["knowledge"]
+    ev = evaluate(result, labels, gates)
+    (out / "evaluation.md").write_text(ev["report_md"], encoding="utf-8")
+    print(ev["report_md"])
+    print(f"Full results: {out}")
+    return 0 if ev["passed"] else 1
+
+
+def cmd_knowledge_feedback(a) -> int:
+    from .knowledge.review import record_feedback
+    print(json.dumps(record_feedback(Path(a.workdir), a.edit, a.accept == "yes", a.by, a.note or ""), indent=2))
+    return 0
+
+
+def cmd_knowledge_report(a) -> int:
+    from .knowledge.review import report
+    print(json.dumps(report(Path(a.workdir)), indent=2))
     return 0
 
 
@@ -99,6 +146,26 @@ def build_parser() -> argparse.ArgumentParser:
     sf.set_defaults(fn=cmd_shadow_feedback)
     sp = ssub.add_parser("report", help="Usefulness and agreement so far")
     sp.set_defaults(fn=cmd_shadow_report)
+
+    k = sub.add_parser("knowledge", help="Use case 2: runbook health, repeat incidents, drafted edits")
+    k.add_argument("--knowledge-dir", default=str(DATA / "knowledge"))
+    k.add_argument("--workdir", default=str(RUNS / "knowledge"))
+    ksub = k.add_subparsers(dest="knowledge_cmd", required=True)
+    kr = ksub.add_parser("run", help="Check runbooks, draft edits, write the review queue")
+    kr.add_argument("--provider", default="mock", choices=["mock", "claude"])
+    kr.set_defaults(fn=cmd_knowledge_run)
+    ke = ksub.add_parser("evaluate", help="Run, then score findings against labels and pilot gates")
+    ke.add_argument("--provider", default="mock", choices=["mock", "claude"])
+    ke.add_argument("--gates", default=str(HOME / "config" / "pilot_gates.json"))
+    ke.set_defaults(fn=cmd_knowledge_evaluate)
+    kf = ksub.add_parser("feedback", help="A runbook owner accepts or rejects a drafted edit")
+    kf.add_argument("edit")
+    kf.add_argument("--accept", required=True, choices=["yes", "no"])
+    kf.add_argument("--by", required=True)
+    kf.add_argument("--note")
+    kf.set_defaults(fn=cmd_knowledge_feedback)
+    kp = ksub.add_parser("report", help="Findings and edit acceptance so far")
+    kp.set_defaults(fn=cmd_knowledge_report)
     return p
 
 
@@ -111,6 +178,9 @@ def main(argv=None) -> int:
         return args.fn(args)
     except ProviderError as exc:
         print(f"Provider error: {exc}", file=sys.stderr)
+        return 2
+    except (FileNotFoundError, ValueError) as exc:
+        print(f"Error: {exc}", file=sys.stderr)
         return 2
 
 

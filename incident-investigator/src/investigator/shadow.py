@@ -1,3 +1,4 @@
+# Author: Pradeep Sahoo
 """Shadow mode: investigate live incidents alongside on-call engineers, without affecting them.
 
 - New incidents arrive in an inbox directory (in production: a webhook from the

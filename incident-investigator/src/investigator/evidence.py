@@ -1,3 +1,4 @@
+# Author: Pradeep Sahoo
 """Turn raw source records into numbered evidence, with all numbers computed in code.
 
 The model never computes a statistic. It only sees evidence summaries written
@@ -153,7 +154,9 @@ def build(source: IncidentSource, runbooks: Runbooks | None = None) -> tuple[dic
     if runbooks is not None:
         blob = " ".join(t for _, t in facts.logs) + " " + inc["title"]
         for rb in runbooks.search(inc["service"], blob):
-            eid = add("runbook", "knowledge base", f"{rb['id']} “{rb['title']}”: " + "; ".join(rb["steps"]))
+            validated = rb.get("last_validated")
+            note = f" (last validated {validated})" if validated else " (never validated)" if "last_validated" in rb else ""
+            eid = add("runbook", "knowledge base", f"{rb['id']} “{rb['title']}”{note}: " + "; ".join(rb["steps"]))
             facts.runbooks.append((eid, rb))
 
     # ---- what we know is not available (feeds "could not establish")

@@ -1,0 +1,30 @@
+{
+  "_meta": {
+    "author": "Pradeep Sahoo",
+    "generated_by": "scripts/generate_synthetic_data.py",
+    "synthetic": true
+  },
+  "as_of": "2026-11-12",
+  "active_teams": [
+    "Membership & Identity",
+    "Loyalty",
+    "Commerce",
+    "Platform",
+    "Data platform"
+  ],
+  "retired_teams": [
+    {
+      "name": "Ledger Core",
+      "retired_on": "2026-06-30",
+      "services_moved_to": "Loyalty"
+    }
+  ],
+  "service_owners": {
+    "membership-api": "Membership & Identity",
+    "loyalty-ledger": "Loyalty",
+    "promotion-engine": "Loyalty",
+    "notification-worker": "Platform",
+    "partner-gateway": "Commerce",
+    "order-service": "Commerce"
+  }
+}

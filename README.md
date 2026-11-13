@@ -1,5 +1,7 @@
 # Engineering Command Centre — Stakeholder Materials
 
+_Author: Pradeep Sahoo_
+
 Materials for the stakeholder review and pilot approval of the **Engineering Command Centre**,
 a governed AI layer for the software lifecycle and production operations.
 
@@ -15,9 +17,12 @@ a governed AI layer for the software lifecycle and production operations.
 > Independently developed reference concept. All data shown is synthetic, and the prototype uses a
 > deterministic mock AI provider. Nothing here is a production outcome.
 
-**Code:** the first use case, incident investigation, is implemented in
-[`incident-investigator/`](incident-investigator/). It runs on past incidents first (replay), then
-alongside on-call engineers (shadow mode). See [section 5](#5-implementation-first-use-case--incident-investigation).
+**Code:** the first two use cases are implemented in [`incident-investigator/`](incident-investigator/).
+1. **Incident investigation:** on past incidents first, then alongside on-call engineers.
+2. **Knowledge & runbooks:** stale runbooks, repeat incidents and drafted fixes.
+
+See [section 5](#5-implementation) for what is built and
+[section 6](#6-decisions-and-trade-offs-made-during-development) for the decisions behind it.
 
 ![Command Centre overview](docs/stakeholder/screenshots/01-overview.png)
 
@@ -324,22 +329,27 @@ an onboarding pack and a practice incident.
 
 ---
 
-## 5. Implementation: first use case — incident investigation
+## 5. Implementation
 
 Code: [`incident-investigator/`](incident-investigator/) · Python 3.10+ · core uses the standard
-library only · 20 automated tests.
+library only · 32 automated tests · builds as an installable wheel. Two use cases are implemented, in
+priority order:
 
-### Why this use case first
+| # | Use case | Status | What it proves |
+|---|----------|--------|----------------|
+| 1 | Incident investigation, on past incidents then in shadow mode | Implemented | Evidence-backed diagnosis is accurate and useful, with zero risk |
+| 2 | Knowledge & runbooks | Implemented | The same platform stops incidents repeating: stale runbooks fixed, follow-ups chased |
 
-| Criterion | Incident investigation |
-|-----------|------------------------|
-| Simplest to build | Read-only; needs 3–4 sources most organisations already have: deploys, metrics, logs, runbooks |
-| Zero risk to start | Begins on **past** incidents, so nothing the agent says can affect a live system |
-| Objectively measurable | The real root cause of a past incident is known, so each answer is right or wrong |
-| Visible value | Every engineering leader feels outage pain; "first evidence-backed hypothesis in minutes" is easy to understand |
-| Builds the shared platform | Forces the parts every later module needs: read-only adapters, evidence linking, policy, audit, evaluation |
+Both share the same building blocks: read-only sources, evidence numbered in code, a deterministic
+first pass, one structured model call with no tools, validation in code, policy-set approvals, an
+append-only audit log and an evaluation against held-out labels.
 
-### How it works
+### 5.1 Use case 1 — Incident investigation
+
+**Why first.** It is read-only and needs only 3–4 sources most organisations already have. It
+starts on **past** incidents, so it carries zero risk, and each answer is objectively right or wrong
+against the known root cause. Every engineering leader feels outage pain. It also forces the shared
+parts every later module needs.
 
 ```mermaid
 flowchart LR
@@ -355,101 +365,183 @@ flowchart LR
     H -.-> L
 ```
 
-1. **Read.** Adapters expose read methods only, behind a tool allow-list. There is no write, restart
-   or notify method anywhere in the package.
-2. **Build evidence.** Records become numbered evidence (E1, E2, …). Before/after-onset statistics
-   are computed in code. Secrets are redacted and instruction-like text is flagged before anything
-   reaches a model.
-3. **Detect.** Eight deterministic detectors (config change, slow query, traffic spike, dependency
-   failure, resource leak, certificate expiry, feature flag, code change) propose candidate causes,
-   including ones they rule down.
-4. **Reason.** One model call ranks and explains the candidates and returns JSON: hypotheses with
-   confidence and cited evidence, what could not be established, and next steps.
-5. **Validate.** Code removes any claim citing evidence that does not exist, any hypothesis resting
-   only on flagged text, and caps confidence at 0.95. Policy, not the model, sets each step's risk
-   and whether it needs approval.
+1. **Read.** Adapters expose read methods only, behind a tool allow-list. No write, restart or
+   notify method exists anywhere in the package.
+2. **Build evidence.** Records become numbered evidence (E1, E2, …), with before/after-onset
+   statistics computed in code. Secrets are redacted and instruction-like text is flagged.
+3. **Detect.** Eight deterministic detectors propose candidate causes, including ones they rule
+   down: config change, slow query, traffic spike, dependency failure, resource leak, certificate
+   expiry, feature flag and code change.
+4. **Reason.** One model call ranks and explains the candidates and returns JSON. It covers
+   hypotheses with confidence and cited evidence, what could not be established, and next steps.
+5. **Validate.** Code removes any claim citing evidence that doesn't exist, and any hypothesis
+   resting only on flagged text. It caps confidence at 0.95. Policy sets each step's risk and
+   whether it needs approval.
 6. **Replay or shadow.** Replay scores the result against labels the investigator never reads.
-   Shadow mode writes it to a review queue and collects engineer feedback.
+   Shadow mode writes to a review queue and collects engineer feedback.
 
-### Trade-off decisions
+**Result (mock provider):** **8 of 8** past incidents correct. That includes one unexplained
+incident, where the right answer is "cause not established". 0 unsupported claims, 0 actions
+executed, 1 injection line flagged, 1 secret redacted. Report:
+[`replay-mock.md`](incident-investigator/reports/replay-mock.md) · example:
+[`example-INC-1011.md`](incident-investigator/reports/example-INC-1011.md).
 
-| Decision | Chosen | Alternative considered | Why |
-|----------|--------|------------------------|-----|
-| Agent shape | Code-controlled workflow with **one** model call and no tools | Autonomous agent loop that queries tools itself | Easier to test, audit and cost-control; the model cannot be talked into calling anything. A tool loop can come later, when evidence needs grow |
-| Where reasoning starts | Rule-based detectors first; the model re-ranks and explains | Model-only investigation | Works and is testable with no model; gives the model a structured start; gives evaluation a baseline to beat |
-| Numbers | Computed in code; the model only cites them | Let the model read raw series | Removes arithmetic errors and invented figures |
-| Trust in the output | Every citation checked in code; unsupported claims removed and **counted** | Trust the model's citations | "Unsupported claims" becomes a measured pilot metric, not a hope |
-| Rollout order | Replay → shadow → (later) live assist | Shadow mode from day one | Replay has known answers and zero risk; shadow measures real usefulness without interfering with on-call |
-| Labels | Separate file the investigator never reads | Labels inside the incident file | Prevents the answer leaking into the investigation; a test enforces it |
-| Default provider | Deterministic mock; Claude is opt-in | Claude by default | Free, reproducible tests and demos; real model quality is measured deliberately with `--provider claude` |
-| Model | Claude Opus 5.5, effort `high`, structured outputs, server-side refusal fallback | A cheaper model (e.g. Claude Sonnet 5.5) | Low volume, high stakes: a wrong lead costs on-call time. Replay makes it cheap to compare a cheaper model later on the same incidents |
-| Untrusted text | Redact secrets, flag injection, wrap evidence as data, give the model no tools | Rely on the system prompt alone | Defence in depth: even a successful injection has nothing to act on |
-| Risk and approval | Set by a policy table from the action type | Let the model rate risk | The model cannot lower a rollback's risk or skip approval; unknown action types default to highest risk |
-| Shadow output | Review queue for the SRE lead; on-call not paged, ticket not changed | Post into the incident channel | Zero interference during the pilot. Cost: no real-time help yet; that comes after go/no-go |
-| Dependencies | Standard library only; `anthropic` optional | Frameworks (LangChain, pandas, a database) | Runs anywhere; fewer supply-chain and approval hurdles for a pilot |
-| Data access | JSON fixtures behind a read-only adapter interface | Connect real tools straight away | Lets the pipeline be proved first; real adapters slot in behind the same interface |
-| Audit storage | Append-only JSON Lines with correlation IDs | Database or WORM storage | Simple and inspectable for the pilot; production would move it to tamper-evident storage |
+### 5.2 Use case 2 — Knowledge & runbooks
 
-### What is implemented
+**Why second.** It reuses use case 1's incident data, evidence pattern, provider, audit and
+evaluation, and adds one source: post-incident records. It is still zero risk, because it only
+drafts edits for owners to approve. Use case 1 makes diagnosis faster; this one stops the same
+incident coming back. It also improves use case 1, whose investigations cite runbooks; those
+citations now show when each runbook was last validated.
 
-- [x] Read-only adapter interface with a tool allow-list, plus fixture adapters
-- [x] Evidence builder: onset detection, before/after statistics, trend detection, runbook matching
-- [x] Secret redaction and prompt-injection flagging on all operational text
-- [x] Eight rule-based detectors, including explicitly ruled-down alternatives
-- [x] Provider interface with a deterministic **mock** and a **Claude** provider (Opus 5.5, structured
-      outputs, refusal fallback, refusal/max-token handling)
-- [x] Validation of every citation; confidence capped; policy-set risk and approval
-- [x] Append-only audit log of every tool call, flag, redaction and result
-- [x] **Replay**: scores past incidents against held-out labels, checks pilot gates, writes a report
-- [x] **Shadow mode**: inbox → investigate once → review queue; engineer feedback; usefulness and
-      agreement report; confirms zero actions and zero on-call notifications
-- [x] Synthetic dataset: 8 past incidents (one deliberately unexplained), 2 live incidents, 7 runbooks
-- [x] 20 automated tests, including the Claude provider's request shape (no network)
+```mermaid
+flowchart LR
+    A[Read-only sources<br/>runbooks · post-incident reviews<br/>follow-up actions · config inventory<br/>team directory] --> B[Deterministic checks<br/>stale · unowned · broken reference<br/>practice drift · missing runbook<br/>repeat incidents · overdue actions]
+    B --> C[Evidence K1, K2, ...<br/>+ code-written recommendations]
+    C --> D[Model call<br/>drafts wording of runbook edits only]
+    D --> E[Validation in code<br/>exact quote of current step<br/>valid evidence · no removed settings]
+    E --> F[Review queue per owning team<br/>accept / reject feedback]
+    F --> G[Evaluation vs labels<br/>pilot gates]
+    B -.-> L[(Append-only<br/>audit log)]
+    E -.-> L
+    F -.-> L
+```
 
-### Not implemented yet
+1. **Read.** Runbooks with owner and last-validated date. Post-incident reviews: what responders
+   actually did, which steps they skipped, and the confirmed cause. Follow-up actions, the config
+   inventory (settings removed or renamed) and the team directory (active and retired teams).
+2. **Check (code).** The checks:
+   - **Stale or never validated:** not validated for more than 180 days, or never validated.
+   - **Unowned:** the owner team was retired; the work routes to the team that took over its services.
+   - **Broken reference:** a step names a setting that has been removed.
+   - **Practice drift:** responders left the runbook to resolve a recent incident.
+   - **Missing runbook:** a recent cause on a service that no runbook covers.
+   - **Repeat incidents:** the same cause again within 90 days.
+   - **Overdue follow-up actions:** recurring causes are listed first.
+3. **Recommend (code).** Validation walk-throughs, ownership changes, new runbooks and escalations
+   come from fixed rules. Ownership changes and new runbooks need approval.
+4. **Draft (model).** For broken references and practice drift only, the model drafts the new step
+   wording, citing evidence.
+5. **Validate (code).** An edit is rejected if it misquotes the current step, points at a step that
+   doesn't exist, still mentions a removed setting, cites no real evidence, or duplicates another
+   edit. Every accepted edit is a **draft needing owner approval**. There is no code path that
+   publishes to the wiki.
+6. **Review.** One review file per owning team. Owners accept or reject each edit, and the report
+   tracks the acceptance rate.
 
-- [ ] Adapters for real tools (deploy pipeline, Prometheus, log search, Jira/ServiceNow, runbook wiki)
-- [ ] A replay run with Claude. It needs an API key and spend approval; the command is ready
-      (`investigator replay --provider claude`)
-- [ ] Webhook from the incident tool into the shadow inbox (today: files in a folder)
-- [ ] Traces, multi-service correlation and post-incident report drafting
-- [ ] Integration with the approval workflow and UI shown in the prototype
-- [ ] Tamper-evident audit storage
+**Result (mock provider):** **9 of 9** expected findings, 0 unexpected. The repeat cluster was
+found: database pool exhaustion, 3 incidents across 2 services. All 4 overdue actions were found,
+including the 2 on the recurring cause. 3 edits were drafted, 0 rejected and 0 published.
+Reports: [`knowledge-evaluation-mock.md`](incident-investigator/reports/knowledge-evaluation-mock.md) ·
+review queues for
+[Membership & Identity](incident-investigator/reports/knowledge-review-membership-identity.md) and
+[Loyalty](incident-investigator/reports/knowledge-review-loyalty.md).
 
-### Results so far
-
-Replay with the **mock** provider: **8 of 8** past incidents had the correct lead hypothesis. That
-includes the unexplained incident, where the correct answer is "cause not established". There were
-0 unsupported claims and 0 actions executed. 1 injection line was flagged and 1 secret redacted. The
-human baseline median was 38 minutes. Full report:
-[`incident-investigator/reports/replay-mock.md`](incident-investigator/reports/replay-mock.md);
-example investigation:
-[`reports/example-INC-1011.md`](incident-investigator/reports/example-INC-1011.md).
-
-> **Read this result with care.** The synthetic incidents were written alongside the detectors, so
-> 8/8 shows the pipeline works end to end. It does **not** predict accuracy on real incidents. The
-> numbers that matter come from replaying 15–20 real past incidents in pilot weeks 3–4, with the
-> Claude provider, against the placeholder gates in
+> **Read both results with care.** The synthetic data was written alongside the rules, so these
+> results show the pipelines work end to end. They do **not** predict accuracy on real data. The
+> numbers that matter come from real incidents and real runbooks during the pilot, run with the
+> Claude provider against the placeholder gates in
 > [`config/pilot_gates.json`](incident-investigator/config/pilot_gates.json).
 
-### How to run
+### 5.3 What is built, and what is not yet
+
+| Area | Built | Not yet |
+|------|-------|---------|
+| Data sources | Read-only interfaces + fixture adapters for every source | Adapters for real tools: deploy pipeline, Prometheus, log search, Jira/ServiceNow, runbook wiki, team directory |
+| Use case 1 | Evidence builder, 8 detectors, validation, replay, shadow mode, feedback and report | Traces, multi-service correlation, post-incident report drafting, webhook into the shadow inbox |
+| Use case 2 | 7 checks, repeat clusters, overdue actions, recommendations, drafted edits with validation, per-team review queue, feedback, evaluation | Publishing approved edits back to the wiki (deliberately not built), reading the wiki's revision history |
+| Model | Mock (default) and Claude Opus 5.5 provider shared by both use cases; request shape tested offline | A paid replay run with Claude. Commands are ready: `replay --provider claude`, `knowledge evaluate --provider claude` |
+| Governance | Policy-set risk and approval, append-only audit, secret redaction, injection flagging | Approval workflow and UI from the prototype; tamper-evident audit storage |
+| Quality | 32 tests, compile check, static import check, wheel build + install verified in a clean virtualenv | CI pipeline |
+
+### 5.4 Build, test and run
 
 ```bash
 cd incident-investigator
-python -m pytest                                   # 20 tests
+python -m pytest                                   # 32 tests, no network
 
 # bash / Git Bash  (PowerShell: $env:PYTHONPATH="src")
 export PYTHONPATH=src
-python -m investigator replay                      # score past incidents, print the report
+
+# Use case 1: incident investigation
+python -m investigator replay                      # past incidents vs known causes
 python -m investigator investigate data/synthetic/live/INC-1042.json
-python -m investigator shadow run                  # investigate new incidents in the inbox
+python -m investigator shadow run                  # new incidents -> review queue
 python -m investigator shadow feedback INC-1042 --useful yes --confirmed-cause config_change --minutes 31 --by sam.sre
-python -m investigator shadow report               # usefulness, agreement, actions executed
+python -m investigator shadow report
+
+# Use case 2: knowledge & runbooks
+python -m investigator knowledge evaluate          # run checks + drafts, score against labels
+python -m investigator knowledge feedback EDIT-RB-017-3-replace --accept yes --by ria.owner
+python -m investigator knowledge report
+
+# Build an installable wheel
+pip wheel . --no-deps -w dist
 
 # With Claude (costs money; needs ANTHROPIC_API_KEY or an `ant auth login` profile)
 pip install -e ".[claude]"
 python -m investigator replay --provider claude
+python -m investigator knowledge evaluate --provider claude
 ```
+
+---
+
+## 6. Decisions and trade-offs made during development
+
+### 6.1 Shared by both use cases
+
+| Decision | Chosen | Alternative considered | Why |
+|----------|--------|------------------------|-----|
+| Agent shape | Code-controlled workflow with **one** model call and no tools | Autonomous agent loop that queries tools itself | Easier to test, audit and cost-control; the model cannot be talked into calling anything. A tool loop can come later, when evidence needs grow |
+| Split of work | Code decides *whether* something is wrong; the model explains and drafts | Model does detection and wording | Detection becomes deterministic, testable and free; the model adds value where wording and judgement matter |
+| Numbers | Computed in code; the model only cites them | Let the model read raw data | No arithmetic errors or invented figures |
+| Citations | Every evidence ID checked in code; invalid claims removed and **counted** | Trust the model's citations | "Unsupported claims" and "rejected edits" become measured metrics |
+| Default provider | Deterministic mock; Claude is opt-in | Claude by default | Free, reproducible tests and demos. Real model quality is measured deliberately |
+| Model | Claude Opus 5.5 at effort `high`, structured JSON output, server-side refusal fallback | A cheaper model such as Claude Sonnet 5.5 | Low volume, high stakes. Replay and evaluation make it cheap to compare a cheaper model later on the same data |
+| One provider class | `complete_json` shared by both use cases | A client per use case | One place for model settings, error handling and refusal handling |
+| Untrusted text | Redact secrets, flag injection, wrap evidence as data, give the model no tools | Rely on the system prompt alone | Defence in depth: even a successful injection has nothing to act on |
+| Approval | Set by policy tables in code | Let the model rate risk | The model cannot lower risk or skip approval; unknown action types default to the highest risk |
+| Labels | Separate files that the pipelines never read | Labels next to the input data | Prevents the answer leaking into the result; a test enforces it for use case 1 |
+| Dependencies | Standard library only; `anthropic` optional | Frameworks (LangChain, pandas, a database) | Runs anywhere; fewer supply-chain and approval hurdles for a pilot |
+| Data access | JSON fixtures behind read-only interfaces | Connect real tools straight away | Proves the pipeline first; real adapters slot in behind the same interface |
+| Audit | Append-only JSON Lines with correlation IDs | Database or WORM storage | Simple and inspectable for a pilot; production moves it to tamper-evident storage |
+| Packaging | One package, two use cases, one CLI | A separate service per use case | Shared code stays shared; split into services once there is real load |
+
+### 6.2 Use case 1 — Incident investigation
+
+| Decision | Chosen | Alternative considered | Why |
+|----------|--------|------------------------|-----|
+| Where reasoning starts | 8 rule-based detectors, then the model re-ranks and explains | Model-only investigation | Works with no model, gives the model a structured start, and gives evaluation a baseline to beat |
+| Rollout order | Replay → shadow → (later) live assist | Shadow mode from day one | Replay has known answers and zero risk; shadow measures real usefulness without interfering with on-call |
+| "Not established" | Below 0.5 confidence the answer is "cause not established", and that can be scored as correct | Always name a cause | A confident wrong lead costs more on-call time than an honest "unknown" |
+| Confidence cap | 0.95 | Allow 1.0 | No investigation from partial evidence should look certain |
+| Ruled-down alternatives | Kept and shown with contradicting evidence | Show only supported causes | Shows engineers what was checked, as in "traffic was flat (E4)" |
+| Shadow output | Review queue for the SRE lead; on-call not paged, ticket not changed | Post into the incident channel | Zero interference during the pilot. The cost is no real-time help until after go/no-go |
+
+### 6.3 Use case 2 — Knowledge & runbooks
+
+| Decision | Chosen | Alternative considered | Why |
+|----------|--------|------------------------|-----|
+| What the model does | Drafts wording for 2 finding kinds only: broken reference and practice drift | Ask the model to audit every runbook | Detection stays deterministic and cheap; the model is used where wording matters |
+| Recommendations | Fixed rules in code (validate, assign owner, create runbook, escalate) | Model-written recommendations | Predictable, testable, and approval needs are fixed per action |
+| Quote check | An edit must quote the current step **exactly** | Accept paraphrased edits | Stops edits to text that doesn't exist and makes every edit a reviewable diff |
+| Removed settings | Rejected if the new text still mentions a removed setting | Trust the draft | Catches the most common bad fix automatically |
+| Publishing | Never: drafts go to a per-team review queue | Auto-publish low-risk edits | Runbooks are used under pressure; a person must own every change. No publish path exists |
+| Retired owners | Work routes to the team that took over the services | Route to the retired team's name | Nobody reads a retired team's queue |
+| Thresholds | Stale after 180 days; repeat if the same cause recurs within 90 days of the previous one | A fixed 90-day window from today | Linking consecutive incidents catches a pattern across Aug–Nov that a fixed window would split |
+| Evaluation date | Fixed `as_of` date stored in the data | Today's date | Results are reproducible; in production `as_of` is the run date |
+
+### 6.4 Decisions made while building
+
+| Situation | Decision | Why |
+|-----------|----------|-----|
+| Windows console could not print "≥" and "✅" (cp1252) | CLI switches stdout and stderr to UTF-8 | Same output on Windows, macOS and Linux |
+| Runbook IDs in the prototype and the code disagreed (RB-052) | Renumbered the certificate runbook to RB-055, so RB-052 is "Ledger replay", as in the prototype screens | One consistent story across the prototype, deck and code |
+| Data files needed an author and generator note, but JSON has no comments | A `_meta` block in each data file; readers ignore it | Every file is attributed without breaking the schema |
+| `setuptools>=68` failed on the local Python (65.5) | Build requirement lowered to `setuptools>=61`, the first version with `pyproject.toml` support | The wheel builds on older toolchains too |
+| No linter installed locally | Compile check and a standard-library static import check, rather than installing tools into the user's environment | Keeps the build dependency-free; add `ruff` in CI later |
+| An installed wheel doesn't include the sample data | Paths are CLI options; defaults point at the repository's `data/` | Running from the repository works out of the box; production passes real paths |
+| Mock results looked perfect (8/8, 9/9) | Stated plainly in the README and in every generated report | The synthetic data was written alongside the rules; perfect scores prove the plumbing, not accuracy |
 
 ---
 

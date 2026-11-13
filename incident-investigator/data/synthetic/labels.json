@@ -1,42 +1,49 @@
 {
-  "INC-0987": {
-    "cause_category": "config_change",
-    "summary": "Pool size cut from 40 to 15 in v2.9",
-    "human_first_hypothesis_min": 38
+  "_meta": {
+    "author": "Pradeep Sahoo",
+    "generated_by": "scripts/generate_synthetic_data.py",
+    "synthetic": true
   },
-  "INC-1011": {
-    "cause_category": "slow_query",
-    "summary": "New expiry query without index on points_txn",
-    "human_first_hypothesis_min": 52
-  },
-  "INC-0995": {
-    "cause_category": "traffic_spike",
-    "summary": "Campaign push tripled traffic; autoscaler at max",
-    "human_first_hypothesis_min": 21
-  },
-  "INC-1003": {
-    "cause_category": "dependency_failure",
-    "summary": "SMS provider outage in EU",
-    "human_first_hypothesis_min": 27
-  },
-  "INC-1019": {
-    "cause_category": "resource_leak",
-    "summary": "Unbounded response cache caused OOM kills",
-    "human_first_hypothesis_min": 64
-  },
-  "INC-1024": {
-    "cause_category": "certificate_expiry",
-    "summary": "Partner mTLS client certificate expired",
-    "human_first_hypothesis_min": 45
-  },
-  "INC-1039": {
-    "cause_category": "bad_feature_flag",
-    "summary": "bonus_rules_v2 enabled at 100% with a null-handling bug",
-    "human_first_hypothesis_min": 18
-  },
-  "INC-1036": {
-    "cause_category": "unknown",
-    "summary": "Never determined; recovered on its own",
-    "human_first_hypothesis_min": null
+  "labels": {
+    "INC-0987": {
+      "cause_category": "config_change",
+      "summary": "Pool size cut from 40 to 15 in v2.9",
+      "human_first_hypothesis_min": 38
+    },
+    "INC-1011": {
+      "cause_category": "slow_query",
+      "summary": "New expiry query without index on points_txn",
+      "human_first_hypothesis_min": 52
+    },
+    "INC-0995": {
+      "cause_category": "traffic_spike",
+      "summary": "Campaign push tripled traffic; autoscaler at max",
+      "human_first_hypothesis_min": 21
+    },
+    "INC-1003": {
+      "cause_category": "dependency_failure",
+      "summary": "SMS provider outage in EU",
+      "human_first_hypothesis_min": 27
+    },
+    "INC-1019": {
+      "cause_category": "resource_leak",
+      "summary": "Unbounded response cache caused OOM kills",
+      "human_first_hypothesis_min": 64
+    },
+    "INC-1024": {
+      "cause_category": "certificate_expiry",
+      "summary": "Partner mTLS client certificate expired",
+      "human_first_hypothesis_min": 45
+    },
+    "INC-1039": {
+      "cause_category": "bad_feature_flag",
+      "summary": "bonus_rules_v2 enabled at 100% with a null-handling bug",
+      "human_first_hypothesis_min": 18
+    },
+    "INC-1036": {
+      "cause_category": "unknown",
+      "summary": "Never determined; recovered on its own",
+      "human_first_hypothesis_min": null
+    }
   }
 }

@@ -1,3 +1,4 @@
+# Author: Pradeep Sahoo
 """Deterministic mock provider.
 
 Turns the detector candidates into the provider output format with fixed

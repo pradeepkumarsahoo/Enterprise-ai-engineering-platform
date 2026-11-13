@@ -1,0 +1,73 @@
+{
+  "_meta": {
+    "author": "Pradeep Sahoo",
+    "generated_by": "scripts/generate_synthetic_data.py",
+    "synthetic": true
+  },
+  "actions": [
+    {
+      "id": "PIA-305",
+      "incident_id": "INC-0995",
+      "description": "Raise promotion-engine autoscaler maximum to 18",
+      "owner_team": "Loyalty",
+      "due": "2026-09-05",
+      "status": "done"
+    },
+    {
+      "id": "PIA-309",
+      "incident_id": "INC-1003",
+      "description": "Pause non-critical sends automatically when the SMS provider is degraded",
+      "owner_team": "Platform",
+      "due": "2026-09-30",
+      "status": "open"
+    },
+    {
+      "id": "PIA-311",
+      "incident_id": "INC-0987",
+      "description": "Alert on DB pool saturation above 90%",
+      "owner_team": "Membership & Identity",
+      "due": "2026-08-30",
+      "status": "open"
+    },
+    {
+      "id": "PIA-318",
+      "incident_id": "INC-1011",
+      "description": "Add index on points_txn(member_id, expiry_at)",
+      "owner_team": "Loyalty",
+      "due": "2026-09-26",
+      "status": "done"
+    },
+    {
+      "id": "PIA-322",
+      "incident_id": "INC-1011",
+      "description": "Load-test the accrual path before each release",
+      "owner_team": "Loyalty",
+      "due": "2026-10-15",
+      "status": "open"
+    },
+    {
+      "id": "PIA-330",
+      "incident_id": "INC-1019",
+      "description": "Add an eviction policy to the partner response cache",
+      "owner_team": "Commerce",
+      "due": "2026-10-20",
+      "status": "done"
+    },
+    {
+      "id": "PIA-334",
+      "incident_id": "INC-1024",
+      "description": "Alert 30 days before certificate expiry",
+      "owner_team": "Commerce",
+      "due": "2026-10-28",
+      "status": "open"
+    },
+    {
+      "id": "PIA-340",
+      "incident_id": "INC-1039",
+      "description": "Null-handling tests for the rules_v2 evaluator",
+      "owner_team": "Loyalty",
+      "due": "2026-11-24",
+      "status": "open"
+    }
+  ]
+}

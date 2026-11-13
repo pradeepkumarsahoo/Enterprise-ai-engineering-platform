@@ -1,3 +1,4 @@
+# Author: Pradeep Sahoo
 """Append-only audit log (JSON Lines).
 
 The class has no update or delete method. Each entry carries a correlation ID

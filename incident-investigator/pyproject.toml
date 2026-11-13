@@ -1,12 +1,15 @@
+# Author: Pradeep Sahoo
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "incident-investigator"
 version = "0.1.0"
-description = "Engineering Command Centre pilot: read-only, evidence-backed incident investigation with replay and shadow mode"
+description = "Engineering Command Centre pilot: incident investigation (replay + shadow) and knowledge & runbooks"
 requires-python = ">=3.10"
+authors = [{ name = "Pradeep Sahoo" }]
+readme = "README.md"
 dependencies = []              # the core runs on the standard library only
 
 [project.optional-dependencies]

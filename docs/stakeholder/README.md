@@ -1,5 +1,7 @@
 # Engineering Command Centre — Stakeholder Materials
 
+_Author: Pradeep Sahoo_
+
 Materials for the stakeholder review and pilot approval of the **Engineering Command Centre**,
 a governed AI layer for the software lifecycle and production operations.
 

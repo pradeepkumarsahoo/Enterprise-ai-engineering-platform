@@ -1,4 +1,5 @@
-"""Generate the synthetic incident dataset used by replay and shadow mode.
+# Author: Pradeep Sahoo
+"""Generate the synthetic datasets used by both use cases.
 
 Everything here is fictional. Each scenario is built from a small set of
 parameters with a fixed random seed, so the output is reproducible:
@@ -6,10 +7,17 @@ parameters with a fixed random seed, so the output is reproducible:
     python scripts/generate_synthetic_data.py
 
 Writes:
-    data/synthetic/incidents/<ID>.json   past incidents (replay input, no labels)
-    data/synthetic/labels.json           ground truth + human baseline (replay scoring only)
-    data/synthetic/live/<ID>.json        new incidents for shadow mode
-    data/synthetic/runbooks.json         knowledge base
+    data/synthetic/incidents/<ID>.json        past incidents (use case 1 replay input, no labels)
+    data/synthetic/labels.json                ground truth + human baseline (use case 1 scoring only)
+    data/synthetic/live/<ID>.json             new incidents for shadow mode
+    data/synthetic/runbooks.json              knowledge base (both use cases)
+    data/synthetic/knowledge/timelines.json   post-incident records: what responders did (use case 2)
+    data/synthetic/knowledge/actions.json     post-incident follow-up actions (use case 2)
+    data/synthetic/knowledge/config_inventory.json  settings removed or renamed per service (use case 2)
+    data/synthetic/knowledge/org.json         active and retired teams, evaluation date (use case 2)
+    data/synthetic/knowledge/labels.json      expected findings (use case 2 scoring only)
+
+JSON files carry a "_meta" block with the author and generator; readers ignore it.
 """
 from __future__ import annotations
 
@@ -331,43 +339,150 @@ LABELS = {
     "INC-1036": {"cause_category": "unknown", "summary": "Never determined; recovered on its own", "human_first_hypothesis_min": None},
 }
 
+META = {"author": "Pradeep Sahoo", "generated_by": "scripts/generate_synthetic_data.py", "synthetic": True}
+
+# Runbooks. Fields used by use case 2: owner_team, last_validated (None = never), covers (cause categories).
 RUNBOOKS = [
     {"id": "RB-017", "title": "Database connection pool exhaustion", "services": ["membership-api", "loyalty-ledger"],
+     "owner_team": "Membership & Identity", "last_validated": "2026-04-14", "covers": ["config_change", "slow_query"],
      "keywords": ["pool", "connection is not available", "hikari", "timed out"],
-     "steps": ["Check pool maximum against previous release", "Look for slow queries holding connections", "Restore pool size through a reviewed config change"]},
+     "steps": ["Check the pool maximum against the previous release",
+               "Look for slow queries holding connections",
+               "Raise MAX_POOL in the service environment and restart"]},
     {"id": "RB-023", "title": "Slow query investigation", "services": ["loyalty-ledger", "order-service"],
+     "owner_team": "Loyalty", "last_validated": "2026-09-30", "covers": ["slow_query"],
      "keywords": ["slow query", "query", "index"],
      "steps": ["Find the slowest statements", "Check the query plan for missing indexes", "Roll back the change or add the index"]},
     {"id": "RB-031", "title": "Event bus and queue backlog", "services": ["notification-worker"],
+     "owner_team": "Platform", "last_validated": "2026-10-09", "covers": ["dependency_failure"],
      "keywords": ["queue", "backlog", "consumer lag"],
      "steps": ["Check downstream provider status", "Pause non-critical sends", "Scale consumers only if the provider is healthy"]},
     {"id": "RB-038", "title": "Traffic surge and autoscaling limits", "services": ["promotion-engine", "membership-api"],
+     "owner_team": "Loyalty", "last_validated": "2026-07-01", "covers": ["traffic_spike"],
      "keywords": ["autoscaler", "max replicas", "traffic", "campaign"],
-     "steps": ["Confirm traffic source (campaign, bot, retry storm)", "Raise autoscaler maximum within quota", "Enable load shedding for non-critical calls"]},
-    {"id": "RB-044", "title": "Feature flag rollback", "services": ["promotion-engine"],
-     "keywords": ["flag", "feature", "rollout"],
-     "steps": ["Identify flags changed before onset", "Turn the flag off for affected cohort", "Confirm error rate recovers"]},
+     "steps": ["Confirm traffic source (campaign, bot, retry storm)", "Raise autoscaler maximum within quota",
+               "Enable load shedding for non-critical calls"]},
+    {"id": "RB-044", "title": "Promotion rule rollback", "services": ["promotion-engine"],
+     "owner_team": "Loyalty", "last_validated": "2025-10-07", "covers": ["bad_feature_flag", "code_change"],
+     "keywords": ["rule", "rollback", "flag", "bonus"],
+     "steps": ["Identify the rule set deployed before onset",
+               "Export the previous rule set from the rules repository",
+               "Re-deploy promotion-engine with the previous rule set",
+               "Confirm the error rate recovers"]},
     {"id": "RB-047", "title": "Memory growth and OOM kills", "services": ["partner-gateway"],
+     "owner_team": "Commerce", "last_validated": "2026-10-20", "covers": ["resource_leak"],
      "keywords": ["oomkilled", "memory", "cache", "heap"],
      "steps": ["Confirm memory growth pattern", "Check caches and buffers without limits", "Restart as mitigation; fix the leak"]},
-    {"id": "RB-052", "title": "Certificate renewal", "services": ["partner-gateway"],
+    {"id": "RB-052", "title": "Ledger replay after outage", "services": ["loyalty-ledger"],
+     "owner_team": "Ledger Core", "last_validated": None, "covers": [],
+     "keywords": ["replay", "ledger", "outage"],
+     "steps": ["Stop accrual writes at the gateway",
+               "Restore the ledger snapshot from backup-vault-eu1",
+               "Replay events from the event bus since the snapshot"]},
+    {"id": "RB-055", "title": "Certificate renewal", "services": ["partner-gateway"],
+     "owner_team": "Commerce", "last_validated": "2026-10-16", "covers": ["certificate_expiry"],
      "keywords": ["x509", "certificate", "tls"],
      "steps": ["Identify the expired certificate", "Rotate through the certificate pipeline", "Add expiry alerting at 30 days"]},
 ]
+
+# What responders actually did, from post-incident reviews (system of record, not evaluation labels).
+TIMELINES = [
+    {"incident_id": "INC-0987", "service": "membership-api", "opened_at": "2026-08-04T09:14:00Z", "resolved_at": "2026-08-04T10:21:00Z",
+     "confirmed_cause": "config_change", "cause_key": "db_connection_pool_exhaustion", "runbook_used": "RB-017",
+     "steps_followed": [1, 2, 3], "steps_skipped": [], "off_runbook_actions": [], "resolved_by": "runbook"},
+    {"incident_id": "INC-0995", "service": "promotion-engine", "opened_at": "2026-08-22T18:03:00Z", "resolved_at": "2026-08-22T18:40:00Z",
+     "confirmed_cause": "traffic_spike", "cause_key": "autoscaler_limit", "runbook_used": "RB-038",
+     "steps_followed": [1, 2], "steps_skipped": [], "off_runbook_actions": [], "resolved_by": "runbook"},
+    {"incident_id": "INC-1003", "service": "notification-worker", "opened_at": "2026-09-02T07:51:00Z", "resolved_at": "2026-09-02T09:05:00Z",
+     "confirmed_cause": "dependency_failure", "cause_key": "sms_provider_outage", "runbook_used": "RB-031",
+     "steps_followed": [1, 2], "steps_skipped": [], "off_runbook_actions": [], "resolved_by": "runbook"},
+    {"incident_id": "INC-1011", "service": "loyalty-ledger", "opened_at": "2026-09-19T15:42:00Z", "resolved_at": "2026-09-19T17:01:00Z",
+     "confirmed_cause": "slow_query", "cause_key": "db_connection_pool_exhaustion", "runbook_used": "RB-023",
+     "steps_followed": [1, 2, 3], "steps_skipped": [], "off_runbook_actions": [], "resolved_by": "runbook"},
+    {"incident_id": "INC-1019", "service": "partner-gateway", "opened_at": "2026-10-06T13:30:00Z", "resolved_at": "2026-10-06T15:12:00Z",
+     "confirmed_cause": "resource_leak", "cause_key": "unbounded_cache", "runbook_used": "RB-047",
+     "steps_followed": [1, 2, 3], "steps_skipped": [], "off_runbook_actions": [], "resolved_by": "runbook"},
+    {"incident_id": "INC-1024", "service": "partner-gateway", "opened_at": "2026-10-14T00:09:00Z", "resolved_at": "2026-10-14T01:20:00Z",
+     "confirmed_cause": "certificate_expiry", "cause_key": "partner_mtls_cert", "runbook_used": "RB-055",
+     "steps_followed": [1, 2], "steps_skipped": [], "off_runbook_actions": [], "resolved_by": "runbook"},
+    {"incident_id": "INC-1036", "service": "order-service", "opened_at": "2026-10-29T16:20:00Z", "resolved_at": "2026-10-29T16:34:00Z",
+     "confirmed_cause": "unknown", "cause_key": "unknown", "runbook_used": None,
+     "steps_followed": [], "steps_skipped": [], "off_runbook_actions": [], "resolved_by": "self_recovered"},
+    {"incident_id": "INC-1039", "service": "promotion-engine", "opened_at": "2026-11-10T11:26:00Z", "resolved_at": "2026-11-10T11:58:00Z",
+     "confirmed_cause": "bad_feature_flag", "cause_key": "bonus_rules_v2_null_handling", "runbook_used": "RB-044",
+     "steps_followed": [1], "steps_skipped": [2, 3],
+     "off_runbook_actions": ["Turned feature flag bonus_rules_v2 off for all cohorts"], "resolved_by": "off_runbook"},
+    {"incident_id": "INC-1042", "service": "membership-api", "opened_at": "2026-11-11T14:09:00Z", "resolved_at": "2026-11-11T15:02:00Z",
+     "confirmed_cause": "config_change", "cause_key": "db_connection_pool_exhaustion", "runbook_used": "RB-017",
+     "steps_followed": [1], "steps_skipped": [3],
+     "off_runbook_actions": ["Restored hikari.maximum-pool-size to 50 through a reviewed config change"], "resolved_by": "off_runbook"},
+    {"incident_id": "INC-1046", "service": "promotion-engine", "opened_at": "2026-11-12T10:37:00Z", "resolved_at": "2026-11-12T11:15:00Z",
+     "confirmed_cause": "dependency_failure", "cause_key": "rules_db_failover", "runbook_used": None,
+     "steps_followed": [], "steps_skipped": [], "off_runbook_actions": ["Paused rule evaluation retries until failover completed"],
+     "resolved_by": "off_runbook"},
+]
+
+ACTIONS = [
+    {"id": "PIA-305", "incident_id": "INC-0995", "description": "Raise promotion-engine autoscaler maximum to 18", "owner_team": "Loyalty", "due": "2026-09-05", "status": "done"},
+    {"id": "PIA-309", "incident_id": "INC-1003", "description": "Pause non-critical sends automatically when the SMS provider is degraded", "owner_team": "Platform", "due": "2026-09-30", "status": "open"},
+    {"id": "PIA-311", "incident_id": "INC-0987", "description": "Alert on DB pool saturation above 90%", "owner_team": "Membership & Identity", "due": "2026-08-30", "status": "open"},
+    {"id": "PIA-318", "incident_id": "INC-1011", "description": "Add index on points_txn(member_id, expiry_at)", "owner_team": "Loyalty", "due": "2026-09-26", "status": "done"},
+    {"id": "PIA-322", "incident_id": "INC-1011", "description": "Load-test the accrual path before each release", "owner_team": "Loyalty", "due": "2026-10-15", "status": "open"},
+    {"id": "PIA-330", "incident_id": "INC-1019", "description": "Add an eviction policy to the partner response cache", "owner_team": "Commerce", "due": "2026-10-20", "status": "done"},
+    {"id": "PIA-334", "incident_id": "INC-1024", "description": "Alert 30 days before certificate expiry", "owner_team": "Commerce", "due": "2026-10-28", "status": "open"},
+    {"id": "PIA-340", "incident_id": "INC-1039", "description": "Null-handling tests for the rules_v2 evaluator", "owner_team": "Loyalty", "due": "2026-11-24", "status": "open"},
+]
+
+CONFIG_INVENTORY = {
+    "membership-api": {"current_version": "v2.14", "removed": [
+        {"name": "MAX_POOL", "removed_in": "v2.11", "replaced_by": "hikari.maximum-pool-size", "where": "application-prod.yaml, changed through a reviewed config change"}]},
+    "loyalty-ledger": {"current_version": "v3.8", "removed": [
+        {"name": "backup-vault-eu1", "removed_in": "CHG-2091", "replaced_by": "backup-vault-eu2"}]},
+}
+
+ORG = {
+    "as_of": "2026-11-12",
+    "active_teams": ["Membership & Identity", "Loyalty", "Commerce", "Platform", "Data platform"],
+    "retired_teams": [{"name": "Ledger Core", "retired_on": "2026-06-30", "services_moved_to": "Loyalty"}],
+    "service_owners": {"membership-api": "Membership & Identity", "loyalty-ledger": "Loyalty", "promotion-engine": "Loyalty",
+                       "notification-worker": "Platform", "partner-gateway": "Commerce", "order-service": "Commerce"},
+}
+
+KNOWLEDGE_LABELS = {
+    "findings": [
+        ["RB-017", "stale"], ["RB-017", "broken_reference"], ["RB-017", "practice_drift"],
+        ["RB-044", "stale"], ["RB-044", "practice_drift"],
+        ["RB-052", "unvalidated"], ["RB-052", "unowned"], ["RB-052", "broken_reference"],
+        ["promotion-engine", "missing_runbook"],
+    ],
+    "repeat_clusters": {"db_connection_pool_exhaustion": ["INC-0987", "INC-1011", "INC-1042"]},
+    "overdue_actions": ["PIA-309", "PIA-311", "PIA-322", "PIA-334"],
+    "overdue_on_repeat": ["PIA-311", "PIA-322"],
+}
+
+
+def _write(path: Path, payload) -> None:
+    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
 def main() -> None:
     (ROOT / "incidents").mkdir(parents=True, exist_ok=True)
     (ROOT / "live").mkdir(parents=True, exist_ok=True)
-    for build in (inc_0987, inc_1011, inc_0995, inc_1003, inc_1019, inc_1024, inc_1039, inc_1036):
-        data = build()
-        (ROOT / "incidents" / f"{data['incident']['id']}.json").write_text(json.dumps(data, indent=2), encoding="utf-8")
-    for build in (inc_1042, inc_1046):
-        data = build()
-        (ROOT / "live" / f"{data['incident']['id']}.json").write_text(json.dumps(data, indent=2), encoding="utf-8")
-    (ROOT / "labels.json").write_text(json.dumps(LABELS, indent=2), encoding="utf-8")
-    (ROOT / "runbooks.json").write_text(json.dumps(RUNBOOKS, indent=2), encoding="utf-8")
-    print(f"Wrote {len(LABELS)} past incidents, 2 live incidents and {len(RUNBOOKS)} runbooks to {ROOT}")
+    (ROOT / "knowledge").mkdir(parents=True, exist_ok=True)
+    for folder, builders in (("incidents", (inc_0987, inc_1011, inc_0995, inc_1003, inc_1019, inc_1024, inc_1039, inc_1036)),
+                             ("live", (inc_1042, inc_1046))):
+        for build in builders:
+            data = {"_meta": META, **build()}
+            _write(ROOT / folder / f"{data['incident']['id']}.json", data)
+    _write(ROOT / "labels.json", {"_meta": META, "labels": LABELS})
+    _write(ROOT / "runbooks.json", {"_meta": META, "runbooks": RUNBOOKS})
+    _write(ROOT / "knowledge" / "timelines.json", {"_meta": META, "timelines": TIMELINES})
+    _write(ROOT / "knowledge" / "actions.json", {"_meta": META, "actions": ACTIONS})
+    _write(ROOT / "knowledge" / "config_inventory.json", {"_meta": META, "services": CONFIG_INVENTORY})
+    _write(ROOT / "knowledge" / "org.json", {"_meta": META, **ORG})
+    _write(ROOT / "knowledge" / "labels.json", {"_meta": META, **KNOWLEDGE_LABELS})
+    print(f"Wrote {len(LABELS)} past incidents, 2 live incidents, {len(RUNBOOKS)} runbooks, "
+          f"{len(TIMELINES)} timelines and {len(ACTIONS)} follow-up actions to {ROOT}")
 
 
 if __name__ == "__main__":

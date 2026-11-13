@@ -1,0 +1,62 @@
+{
+  "_meta": {
+    "author": "Pradeep Sahoo",
+    "generated_by": "scripts/generate_synthetic_data.py",
+    "synthetic": true
+  },
+  "findings": [
+    [
+      "RB-017",
+      "stale"
+    ],
+    [
+      "RB-017",
+      "broken_reference"
+    ],
+    [
+      "RB-017",
+      "practice_drift"
+    ],
+    [
+      "RB-044",
+      "stale"
+    ],
+    [
+      "RB-044",
+      "practice_drift"
+    ],
+    [
+      "RB-052",
+      "unvalidated"
+    ],
+    [
+      "RB-052",
+      "unowned"
+    ],
+    [
+      "RB-052",
+      "broken_reference"
+    ],
+    [
+      "promotion-engine",
+      "missing_runbook"
+    ]
+  ],
+  "repeat_clusters": {
+    "db_connection_pool_exhaustion": [
+      "INC-0987",
+      "INC-1011",
+      "INC-1042"
+    ]
+  },
+  "overdue_actions": [
+    "PIA-309",
+    "PIA-311",
+    "PIA-322",
+    "PIA-334"
+  ],
+  "overdue_on_repeat": [
+    "PIA-311",
+    "PIA-322"
+  ]
+}

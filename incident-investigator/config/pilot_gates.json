@@ -1,7 +1,21 @@
 {
-  "lead_accuracy_min": 0.75,
-  "false_confident_leads_max": 0,
-  "unsupported_claims_max": 0,
-  "actions_executed_max": 0,
-  "note": "Placeholder thresholds for the prototype. Replace them with the targets agreed with sponsors after the week 1-2 baseline."
+  "_meta": {
+    "author": "Pradeep Sahoo",
+    "note": "Placeholder thresholds for the prototype. Replace them with the targets agreed with sponsors after the week 1-2 baseline."
+  },
+  "incident_investigation": {
+    "lead_accuracy_min": 0.75,
+    "false_confident_leads_max": 0,
+    "unsupported_claims_max": 0,
+    "actions_executed_max": 0,
+    "note": "Use case 1. Placeholder thresholds; replace with targets agreed after the baseline."
+  },
+  "knowledge": {
+    "findings_recall_min": 0.8,
+    "findings_precision_min": 0.8,
+    "repeat_clusters_exact": true,
+    "rejected_edits_max": 0,
+    "edits_published_without_approval_max": 0,
+    "note": "Use case 2. Placeholder thresholds; replace with targets agreed with runbook owners."
+  }
 }
