@@ -1,0 +1,45 @@
+{
+  "_meta": {
+    "author": "Pradeep Sahoo",
+    "generated_by": "scripts/generate_synthetic_data.py",
+    "synthetic": true
+  },
+  "result": [
+    {
+      "number": "CHG0030411",
+      "cmdb_ci": "membership-api",
+      "type": "Normal",
+      "state": "Closed",
+      "short_description": "Deploy membership-api v2.11 (connection pool settings)",
+      "start_date": "2026-08-04 09:02:00",
+      "end_date": "2026-08-04 09:06:00"
+    },
+    {
+      "number": "CHG0030415",
+      "cmdb_ci": "membership-api",
+      "type": "Emergency",
+      "state": "Closed",
+      "short_description": "Restore membership-api DB pool size to 50 (fix for INC0010987)",
+      "start_date": "2026-08-04 10:05:00",
+      "end_date": "2026-08-04 10:12:00"
+    },
+    {
+      "number": "CHG0030502",
+      "cmdb_ci": "loyalty-ledger",
+      "type": "Normal",
+      "state": "Closed",
+      "short_description": "Release loyalty-ledger v3.5: add points-expiry lookup (new query on points_txn)",
+      "start_date": "2026-09-19 15:34:00",
+      "end_date": "2026-09-19 15:38:00"
+    },
+    {
+      "number": "CHG0030530",
+      "cmdb_ci": "order-service",
+      "type": "Normal",
+      "state": "Closed",
+      "short_description": "Release order-service v4.2: order cache",
+      "start_date": "2026-10-06 10:00:00",
+      "end_date": "2026-10-06 10:20:00"
+    }
+  ]
+}

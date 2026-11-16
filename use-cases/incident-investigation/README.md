@@ -15,10 +15,14 @@ python ecc.py incident investigate use-cases/incident-investigation/data/synthet
 python ecc.py incident shadow run                   # new incidents -> review queue
 python ecc.py incident shadow feedback INC-1042 --useful yes --confirmed-cause config_change --minutes 31 --by sam.sre
 python ecc.py incident shadow report
+
+# Replay on incident history from ServiceNow (read-only; a dummy instance with fixtures by default)
+python ecc.py incident servicenow pull             # alert-time incident files, labels, analysis
+python ecc.py incident servicenow replay           # pull, then replay and score
 ```
 
-Add `--provider claude` to `investigate`, `replay` or `shadow run` to use Claude. Outputs go to
-`runs/incident/`.
+Add `--provider claude` to `investigate`, `replay`, `shadow run` or the `servicenow` commands to use
+Claude (for ServiceNow it also reads the resolution notes into labels). Outputs go to `runs/incident/`.
 
 ## Configuration · `[use_cases.incident]`
 
@@ -29,10 +33,14 @@ Add `--provider claude` to `investigate`, `replay` or `shadow run` to use Claude
 | `paths.live` | — | Shadow-mode inbox |
 | `settings.lead_confidence_min` | 0.5 | Below this, the answer is "cause not established" |
 | `settings.max_confidence` | 0.95 | No hypothesis is ever shown as certain |
+| `settings.servicenow_query` | `active=false^priorityIN1,2` | Which closed ServiceNow incidents to replay (encoded query) |
 | `gates.*` | see config | Lead accuracy, confident-but-wrong leads, unsupported claims, actions executed |
 
-Runbooks come from `[sources].runbooks`, shared with use case 2. Action risk and approval rules are
-in `policy.py`, not the configuration: they are governance and change through code review.
+Runbooks come from `[sources].runbooks`, shared with use case 2. ServiceNow comes from
+`[connectors.servicenow]`: a dummy URL with `transport = "fixture"` out of the box; for a real
+instance set the URL, `transport = "http"` and `ECC_SERVICENOW_TOKEN` (or user and password).
+Action risk and approval rules are in `policy.py`, not the configuration: they are governance and
+change through code review.
 
 ## Code map
 
@@ -48,5 +56,6 @@ in `policy.py`, not the configuration: they are governance and change through co
 | `src/ecc_incident/policy.py` | Action risk/approval table, modes, confidence `Limits` |
 | `src/ecc_incident/investigator.py` | Orchestrates one investigation |
 | `src/ecc_incident/replay.py` · `shadow.py` · `render.py` | Replay scoring, shadow mode, Markdown output |
+| `src/ecc_incident/servicenow.py` | ServiceNow pull: alert-time/outcome split, labeller with verbatim quotes, incident analysis |
 | `data/synthetic/` | Past incidents, live incidents, labels |
-| `reports/` | [`replay-mock.md`](reports/replay-mock.md), [`example-INC-1011.md`](reports/example-INC-1011.md) |
+| `reports/` | [`replay-mock.md`](reports/replay-mock.md), [`example-INC-1011.md`](reports/example-INC-1011.md); ServiceNow: [`servicenow-analysis-mock.md`](reports/servicenow-analysis-mock.md), [`servicenow-replay-mock.md`](reports/servicenow-replay-mock.md), [`servicenow-example-INC0011003.md`](reports/servicenow-example-INC0011003.md) |

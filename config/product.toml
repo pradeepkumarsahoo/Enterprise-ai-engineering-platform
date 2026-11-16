@@ -29,6 +29,22 @@ fallbacks = "default"          # server-side refusal fallback; "" turns it off
 [sources]
 runbooks = "shared-data/synthetic/runbooks.json"
 
+# Read-only connectors to systems of record.
+# ServiceNow: the URL below is a DUMMY instance. With transport = "fixture" the connector reads
+# shared-data/synthetic/servicenow/ (Table API-shaped JSON) instead of calling the network.
+# For a real instance: set url, transport = "http", and export either ECC_SERVICENOW_TOKEN or
+# ECC_SERVICENOW_USER + ECC_SERVICENOW_PASSWORD for a read-only integration user (time zone UTC).
+[connectors.servicenow]
+url = "https://dev00000.service-now.com"
+transport = "fixture"          # fixture | http
+fixture_dir = "shared-data/synthetic/servicenow"
+user_env = "ECC_SERVICENOW_USER"
+password_env = "ECC_SERVICENOW_PASSWORD"
+token_env = "ECC_SERVICENOW_TOKEN"
+timeout_s = 30
+page_size = 100
+max_records = 500              # hard cap per table read
+
 # ------------------------------------------------------------------ use case 1
 [use_cases.incident]
 enabled = true
@@ -42,6 +58,7 @@ live = "use-cases/incident-investigation/data/synthetic/live"               # sh
 [use_cases.incident.settings]
 lead_confidence_min = 0.5      # below this, the answer is "cause not established"
 max_confidence = 0.95          # no hypothesis is ever shown as certain
+servicenow_query = "active=false^priorityIN1,2"   # which closed incidents `ecc incident servicenow` replays
 
 [use_cases.incident.gates]
 lead_accuracy_min = 0.75

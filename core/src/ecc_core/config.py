@@ -4,6 +4,7 @@
     [product]     name, environment, root, runs_dir
     [model]       default provider and Claude settings
     [sources]     read-only sources shared by several use cases (e.g. runbooks)
+    [connectors.servicenow]   read-only ServiceNow instance: url, transport (fixture | http), limits
     [use_cases.<key>]
         enabled, module           which use cases are switched on, and the package that implements each
         [.paths]                  that use case's data locations
@@ -27,6 +28,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from .llm import ModelSettings
+from .servicenow import SCHEMA as SERVICENOW_SCHEMA, TRANSPORTS as SERVICENOW_TRANSPORTS, ServiceNowSettings
 
 PROVIDERS = ("mock", "claude")
 EFFORTS = ("low", "medium", "high", "xhigh", "max")
@@ -65,6 +67,7 @@ class Config:
     model: ModelSettings
     sources: dict[str, Path]
     use_cases: dict[str, UseCaseConfig] = field(default_factory=dict)
+    servicenow: ServiceNowSettings | None = None
 
     def enabled(self) -> list[UseCaseConfig]:
         return [u for u in self.use_cases.values() if u.enabled]
@@ -101,7 +104,7 @@ def load_config(path: str | Path | None = None) -> Config:
 
     problems: list[str] = []
     for k in raw:
-        if k not in ("product", "model", "sources", "use_cases"):
+        if k not in ("product", "model", "sources", "connectors", "use_cases"):
             problems.append(f"unknown section [{k}]")
     product, model = raw.get("product", {}), raw.get("model", {})
     _check(product, _PRODUCT, "[product]", problems)
@@ -125,6 +128,22 @@ def load_config(path: str | Path | None = None) -> Config:
         else:
             problems.append(f"[sources].{k}: expected a path string")
 
+    servicenow = None
+    for name, table in raw.get("connectors", {}).items():
+        if name != "servicenow":
+            problems.append(f"[connectors.{name}]: unknown connector (known: servicenow)"); continue
+        _check(table, SERVICENOW_SCHEMA, "[connectors.servicenow]", problems)
+        if table.get("transport", "fixture") not in SERVICENOW_TRANSPORTS:
+            problems.append(f"[connectors.servicenow].transport: not one of {', '.join(SERVICENOW_TRANSPORTS)}")
+        if not table.get("url", "").startswith("https://"):
+            problems.append("[connectors.servicenow].url: must start with https://")
+        if table.get("transport", "fixture") == "fixture" and "fixture_dir" not in table:
+            problems.append("[connectors.servicenow].fixture_dir: required when transport = \"fixture\"")
+        known = {k: v for k, v in table.items() if k in SERVICENOW_SCHEMA and k != "fixture_dir"}
+        if not problems:
+            servicenow = ServiceNowSettings(**known, fixture_dir=(root / table["fixture_dir"]).resolve()
+                                            if "fixture_dir" in table else None)
+
     use_cases = {}
     for key, table in raw.get("use_cases", {}).items():
         where = f"[use_cases.{key}]"
@@ -144,4 +163,5 @@ def load_config(path: str | Path | None = None) -> Config:
     if problems:
         raise ConfigError(problems, path)
     return Config(path, root, product.get("name", "Engineering Command Centre"), product.get("environment", "pilot"),
-                  (root / product.get("runs_dir", "runs")).resolve(), provider, settings, sources, use_cases)
+                  (root / product.get("runs_dir", "runs")).resolve(), provider, settings, sources, use_cases,
+                  servicenow)

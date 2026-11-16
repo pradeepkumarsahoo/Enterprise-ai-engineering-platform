@@ -168,8 +168,9 @@ def code_change(f: Facts) -> Candidate | None:
     if not plain:
         return None
     eid, d = plain[0]
-    return Candidate("code_change", f"Code change in {d['version_to']} deployed just before onset",
-                     [eid] + _primary_up(f), [], 0.35, [f"The diff of {d['version_to']} was not analysed"])
+    what = d.get("version_to") or d["id"]
+    return Candidate("code_change", f"Code change in {what} deployed just before onset",
+                     [eid] + _primary_up(f), [], 0.35, [f"The diff of {what} was not analysed"])
 
 
 DETECTORS = (config_change, slow_query, traffic_spike, dependency_failure, resource_leak,

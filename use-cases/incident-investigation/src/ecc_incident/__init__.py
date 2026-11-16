@@ -19,7 +19,8 @@ USE_CASE = UseCase(
     register=register,
     paths=("incidents", "labels", "live"),
     sources=("runbooks",),
-    settings={"lead_confidence_min": LEAD_CONFIDENCE_MIN, "max_confidence": MAX_CONFIDENCE},
+    settings={"lead_confidence_min": LEAD_CONFIDENCE_MIN, "max_confidence": MAX_CONFIDENCE,
+              "servicenow_query": "active=false^priorityIN1,2"},
     gates={"lead_accuracy_min": 0.75, "false_confident_leads_max": 0, "unsupported_claims_max": 0,
            "actions_executed_max": 0, "note": ""},
 )

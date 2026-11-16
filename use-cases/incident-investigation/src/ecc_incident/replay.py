@@ -115,7 +115,9 @@ def report_md(result: dict) -> str:
              f"| Instruction-like log lines flagged | {m['injection_lines_flagged']} | — | |",
              f"| Secrets redacted before the model call | {m['secrets_redacted']} | — | |",
              f"| Median agent time | {m['median_agent_seconds']} s | — | |",
-             f"| Median human time to first correct hypothesis | {m['median_human_minutes_to_first_hypothesis']} min | baseline | |",
+             f"| Median human time to first correct hypothesis | "
+             + (f"{m['median_human_minutes_to_first_hypothesis']} min" if m['median_human_minutes_to_first_hypothesis'] is not None
+                else "not available") + " | baseline | |",
              "", "| Incident | Known cause | Predicted | Confidence | Evidence cited | Human baseline |",
              "|---|---|---|---|---|---|"]
     for c in result["cases"]:
@@ -123,6 +125,10 @@ def report_md(result: dict) -> str:
         human = f"{c['human_minutes']} min" if c["human_minutes"] is not None else "not found"
         lines.append(f"| {c['incident_id']} | {c['expected']} | {mark} {c['predicted']} | {c['lead_confidence']:.2f} | "
                      f"{c['lead_evidence']} | {human} |")
+    missed = [c["incident_id"] for c in result["cases"] if not c["correct"] and c["predicted"] == "unknown"]
+    if missed:
+        lines += ["", f"Missed but not wrong: {', '.join(missed)} reported “cause not established” instead of a "
+                      "confident wrong lead. The evidence to name the cause was not in the sources read."]
     lines += ["", f"_Gate note: {g.get('note', '')}_", ""]
     if m["provider"] == "mock":
         lines += ["_Provider `mock` turns the rule-based detectors into answers with fixed templates. "

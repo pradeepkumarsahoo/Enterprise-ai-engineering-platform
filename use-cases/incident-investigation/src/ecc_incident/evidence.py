@@ -90,8 +90,9 @@ def build(source: IncidentSource, runbooks: Runbooks | None = None) -> tuple[dic
         when = (f"{minutes:.0f} min before onset" if minutes < 120
                 else f"{minutes / 60:.0f} h before onset" if minutes < 48 * 60
                 else f"{minutes / 1440:.0f} days before onset")
-        summary = (f"{d['id']} · {d['service']} {d['version_from']} → {d['version_to']} at "
-                   f"{at:%H:%M} UTC ({when}). Change: {d.get('change_summary', 'n/a')}")
+        what = f"{d['version_from']} → {d['version_to']}" if d.get("version_to") else "change"
+        summary = (f"{d['id']} · {d['service']} {what} at {at:%H:%M} UTC ({when}). "
+                   f"Change: {d.get('change_summary', 'n/a')}")
         text, flags = clean(summary)
         eid = add("deployment", "deploy pipeline", text, flags)
         near = 0 <= minutes <= DEPLOY_WINDOW_MIN
@@ -126,6 +127,8 @@ def build(source: IncidentSource, runbooks: Runbooks | None = None) -> tuple[dic
                            f"(×{ratio:.2f}) before vs after onset {onset:%H:%M} UTC")
             eid = add("metric", "metrics", summary)
             facts.metrics[name] = MetricFact(eid, name, before, after, ratio, direction, near_limit)
+    elif primary is None:
+        facts.missing_sources.append("No metrics: the alerting metric is not available from this source")
     else:
         facts.missing_sources.append("No clear onset found in the alerting metric")
 

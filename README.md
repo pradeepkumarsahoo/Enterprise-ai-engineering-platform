@@ -346,7 +346,7 @@ an onboarding pack and a practice incident.
 ## 5. Implementation
 
 Code: [`core/`](core/) + one package per use case in [`use-cases/`](use-cases/) · Python 3.11+ ·
-standard library only · 93 automated tests · each package builds as an installable wheel. Three use
+standard library only · 111 automated tests · each package builds as an installable wheel. Three use
 cases are implemented, in priority order:
 
 | # | Use case | Status | What it proves |
@@ -400,6 +400,66 @@ incident, where the right answer is "cause not established". 0 unsupported claim
 executed, 1 injection line flagged, 1 secret redacted. Report:
 [`replay-mock.md`](use-cases/incident-investigation/reports/replay-mock.md) · example:
 [`example-INC-1011.md`](use-cases/incident-investigation/reports/example-INC-1011.md).
+
+#### Extension: replay on incident history from ServiceNow
+
+**Why.** Synthetic incidents prove the pipeline; real incident history is how accuracy gets
+measured. ServiceNow already holds what replay needs: past incidents, the alert text written into
+each ticket, change records, CMDB relationships, and resolution notes that state the confirmed
+cause.
+
+```mermaid
+flowchart LR
+    S[(ServiceNow<br/>read-only connector<br/>incident · change_request<br/>problem · cmdb_rel_ci)] --> P[Pull: split each ticket]
+    P --> A[Alert-time file<br/>title · CI · alert text<br/>changes BEFORE opening<br/>upstream incidents via CMDB]
+    P --> O[Outcome<br/>close notes · problem cause]
+    O --> L[Labeller<br/>cause only with a verbatim quote<br/>else left unlabelled]
+    A --> I[Investigator<br/>same pipeline as replay]
+    I --> R[Replay score vs labels<br/>+ incident analysis]
+    L --> R
+```
+
+1. **Connect, read-only.** `[connectors.servicenow]` in the product configuration sets the
+   instance, transport and limits. The connector only sends GET requests to the REST Table API,
+   refuses tables outside an allow-list, caps records per read, and takes credentials from
+   environment variables. The configured URL is a **dummy instance**
+   (`https://dev00000.service-now.com`) with `transport = "fixture"`, which reads Table API-shaped
+   records from [`shared-data/synthetic/servicenow/`](shared-data/synthetic/servicenow/).
+   Switching to a real instance is a config change: the URL, `transport = "http"` and a read-only
+   integration user.
+2. **Split every ticket.** What was known when the incident was opened goes to the investigator:
+   - the title, priority and CI, and the alert text from the description;
+   - change records on the same CI in the 7 days **before** opening;
+   - open incidents on CIs it depends on, found through CMDB relationships.
+
+   Close notes, close codes, resolution times and problem records are fetched through a separate
+   field list and go to scoring only. A change made after opening (usually the fix) is excluded.
+   Secrets are redacted and instruction-like text flagged before anything is written to disk.
+3. **Label from the notes, never guess.** A cause category is recorded only when the resolution
+   notes state one, with the sentence quoted word for word. Notes like "Restarted pods, issue
+   resolved" stay unlabelled and are left out of the score. Labels are marked "proposed": a person
+   spot-checks them before the scores are relied on.
+4. **Replay and analyse.** The same investigator runs on the pulled incidents and is scored against
+   the labels. An analysis lists every incident with time to resolve, stated cause, problem
+   record, changes before opening and upstream incidents, plus CIs with repeat incidents and notes
+   that state no cause.
+
+**Result (dummy instance, mock provider):**
+- **8 incidents pulled**, of which 6 have a cause stated in the resolution notes.
+- **4 of those 6 correct**, with **0 confident-but-wrong answers**. That's below the 75%
+  placeholder gate, so the run reports FAIL.
+- **The 2 misses** (a config change and a traffic spike) came out "cause not established".
+  Naming them needs config diffs or metrics, which ServiceNow doesn't hold.
+- **The 2 tickets with vague notes** were left out of the score and listed as a data-quality
+  finding.
+- **Nothing leaked:** no outcome text, no fix change and no secret reached the investigator, and
+  tests check this.
+
+This is the expected shape of a real result: tickets alone support some causes, not all. The
+next gain comes from connecting monitoring and the deploy pipeline. Reports:
+[`servicenow-analysis-mock.md`](use-cases/incident-investigation/reports/servicenow-analysis-mock.md) ·
+[`servicenow-replay-mock.md`](use-cases/incident-investigation/reports/servicenow-replay-mock.md) · example
+[`servicenow-example-INC0011003.md`](use-cases/incident-investigation/reports/servicenow-example-INC0011003.md).
 
 ### 5.2 Use case 2 — Knowledge & runbooks
 
@@ -572,21 +632,21 @@ scripts/                     synthetic data generator, README screenshot
 
 | Area | Built | Not yet |
 |------|-------|---------|
-| Data sources | Read-only interfaces + fixture adapters for every source | Adapters for real tools: deploy pipeline, Prometheus, log search, Jira/ServiceNow, runbook wiki, team directory |
+| Data sources | Read-only interfaces + fixture adapters for every source; read-only ServiceNow connector (REST Table API, or fixtures behind a dummy instance URL) | A run against a real ServiceNow instance; adapters for the deploy pipeline, Prometheus, log search, Jira, runbook wiki, team directory |
 | Use case 1 | Evidence builder, 8 detectors, validation, replay, shadow mode, feedback and report | Traces, multi-service correlation, post-incident report drafting, webhook into the shadow inbox |
 | Use case 2 | 7 checks, repeat clusters, overdue actions, recommendations, drafted edits with validation, per-team review queue, feedback, evaluation | Publishing approved edits back to the wiki (deliberately not built), reading the wiki's revision history |
 | Use case 3 | Requirement document intake with quote and figure checks, option-by-NFR assessment, ranking, ADR conflicts, open questions, drafted ADR and stories with validation, NFR traceability, Mermaid container diagram, proposal pack as Markdown and an HTML page, approver feedback, evaluation | Reading Word or PDF directly (export to Markdown first), diagrams for options other than the preferred one, cost estimates (left to Licensing & TCO), writing approved ADRs and stories to the repository or Jira (deliberately not built) |
 | Platform | Core package, plugin contract, one `ecc` CLI, product configuration with strict validation and environment overrides, a package per use case | Per-environment configuration files, secrets from a vault, a service deployment |
 | Model | Mock (default) and one Claude Opus 5.5 client in core, used by all three use cases; request shape tested offline | A paid run with Claude. Commands are ready: `ecc incident replay --provider claude`, `ecc knowledge evaluate --provider claude`, `ecc architecture evaluate --provider claude` |
 | Governance | Policy-set risk and approval, append-only audit, secret redaction, injection flagging | Approval workflow and UI from the prototype; tamper-evident audit storage |
-| Quality | 93 tests (24 core, 20 + 13 + 35 per use case), compile check, a test that use cases never import each other, every package built and installed in a clean virtualenv | CI pipeline |
+| Quality | 111 tests (36 core, 27 + 13 + 35 per use case), compile check, a test that use cases never import each other, every package built and installed in a clean virtualenv | CI pipeline |
 
 ### 5.6 Build, test and run
 
 Python 3.11 or newer; nothing to install for the mock provider. Run from the repository root.
 
 ```bash
-python -m pytest                                   # 93 tests across core and the three use cases, no network
+python -m pytest                                   # 111 tests across core and the three use cases, no network
 python ecc.py use-cases                            # what is enabled
 python ecc.py config validate                      # check config/product.toml and every data path
 
@@ -596,6 +656,8 @@ python ecc.py incident investigate use-cases/incident-investigation/data/synthet
 python ecc.py incident shadow run                  # new incidents -> review queue
 python ecc.py incident shadow feedback INC-1042 --useful yes --confirmed-cause config_change --minutes 31 --by sam.sre
 python ecc.py incident shadow report
+python ecc.py incident servicenow pull             # ServiceNow history: alert-time files, labels, analysis
+python ecc.py incident servicenow replay           # pull, then replay and score (dummy instance by default)
 
 # Use case 2: knowledge & runbooks
 python ecc.py knowledge evaluate                   # run checks + drafts, score against labels
@@ -650,6 +712,10 @@ python ecc.py architecture evaluate --provider claude
 | Decision | Chosen | Alternative considered | Why |
 |----------|--------|------------------------|-----|
 | Where reasoning starts | 8 rule-based detectors, then the model re-ranks and explains | Model-only investigation | Works with no model, gives the model a structured start, and gives evaluation a baseline to beat |
+| ServiceNow access | Code reads ServiceNow through a read-only connector; the model gets no tools | Give the model the ServiceNow MCP server's tools | Keeps "nothing can act, everything is cited": records are gathered and checked by code, then cited by the model |
+| What the investigator sees from a ticket | Fields known when it was opened, and changes before opening | The whole ticket | Close notes and the fix are the answer; showing them would make replay score 100% and prove nothing |
+| Labels from resolution notes | A cause only with a verbatim quote; otherwise unlabelled and not scored | Infer a cause from vague notes | A guessed label makes accuracy meaningless; vague notes are reported as a data-quality finding instead |
+| Dummy instance | `transport = "fixture"` behind a dummy URL; the HTTP path is tested against a local Table API stub | Mock the HTTP client only | The same code path runs end to end without credentials; switching to a real instance is a config change |
 | Rollout order | Replay → shadow → (later) live assist | Shadow mode from day one | Replay has known answers and zero risk; shadow measures real usefulness without interfering with on-call |
 | "Not established" | Below 0.5 confidence the answer is "cause not established", and that can be scored as correct | Always name a cause | A confident wrong lead costs more on-call time than an honest "unknown" |
 | Confidence cap | 0.95 | Allow 1.0 | No investigation from partial evidence should look certain |
@@ -708,6 +774,7 @@ python ecc.py architecture evaluate --provider claude
 | Use case 2 imported the runbook loader from use case 1, and the Claude provider had one method per use case | The loader moved to core; core keeps one generic `complete_json`, and each use case owns its prompt, schema and small adapter | Removes every dependency between use cases; a new use case needs no change in core |
 | Thresholds were module constants and gates were a separate JSON file | Both moved to `config/product.toml`, passed into the code as small typed values (`Limits`, `Thresholds`, `Rules`) | Configurable without global state; defaults stay documented in code and tested to match the file |
 | `tomllib` needs Python 3.11 | Minimum raised from 3.10 to 3.11 | A configuration file people can comment is worth it; 3.10 reaches end of life in 2026 |
+| A secret redacted during the ServiceNow pull was counted again by the investigator (`password=[REDACTED]` matched the pattern) | Redaction made idempotent; the pull records its own redactions in the audit log | Each redaction is counted once, where it happened. Found by a test |
 | Mock results looked perfect (8/8, 9/9, 44/44) | Stated plainly in the README and in every generated report | The synthetic data was written alongside the rules; perfect scores prove the plumbing, not accuracy |
 
 ---

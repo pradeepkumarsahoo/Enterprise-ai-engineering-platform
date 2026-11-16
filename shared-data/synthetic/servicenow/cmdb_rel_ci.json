@@ -1,0 +1,19 @@
+{
+  "_meta": {
+    "author": "Pradeep Sahoo",
+    "generated_by": "scripts/generate_synthetic_data.py",
+    "synthetic": true
+  },
+  "result": [
+    {
+      "parent": "notification-worker",
+      "child": "sms-provider",
+      "type": "Depends on::Used by"
+    },
+    {
+      "parent": "loyalty-ledger",
+      "child": "membership-api",
+      "type": "Depends on::Used by"
+    }
+  ]
+}

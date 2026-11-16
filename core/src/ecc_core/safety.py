@@ -35,6 +35,8 @@ def redact(text: str) -> tuple[str, bool]:
 
     def _kv(m: re.Match) -> str:
         nonlocal changed
+        if m.group(3) == "[REDACTED]":          # already redacted upstream: idempotent, not counted again
+            return m.group(0)
         changed = True
         return f"{m.group(1)}=[REDACTED]"
 

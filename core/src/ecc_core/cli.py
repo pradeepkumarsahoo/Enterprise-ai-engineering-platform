@@ -48,6 +48,7 @@ def cmd_config_show(config, contexts) -> int:
     out = {"file": config.path, "root": config.root, "product": {"name": config.name, "environment": config.environment,
                                                               "runs_dir": config.runs_dir},
            "model": {"provider": config.provider, **asdict(config.model)}, "sources": config.sources,
+           "connectors": {"servicenow": asdict(config.servicenow)} if config.servicenow else {},
            "use_cases": {c.use_case.key: {"module": c.section.module, "paths": c.section.paths,
                                           "settings": c.settings, "gates": c.gates} for c in contexts}}
     print(json.dumps(out, indent=2, default=_jsonable))
@@ -61,6 +62,9 @@ def cmd_config_validate(config, contexts) -> int:
             load_use_case(config, section, check_paths=True)
         except ConfigError as exc:
             problems += exc.problems
+    sn = config.servicenow
+    if sn and sn.transport == "fixture" and not (sn.fixture_dir and sn.fixture_dir.exists()):
+        problems.append(f"[connectors.servicenow].fixture_dir: {sn.fixture_dir} does not exist")
     for p in problems:
         print(f"problem: {p}")
     print(f"{config.path}: {'invalid' if problems else 'valid'} · {len(config.enabled())} use case(s) enabled")

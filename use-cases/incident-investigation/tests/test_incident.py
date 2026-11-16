@@ -183,3 +183,85 @@ def test_limits_come_from_the_product_configuration(tmp_path):
     result = replay_run(CTX.path("incidents"), CTX.path("labels"), RUNBOOKS, MockProvider(strict), tmp_path, GATES,
                         strict)
     assert all(c["predicted"] == "unknown" for c in result["cases"])
+
+
+# ------------------------------------------------------------------ ServiceNow history (dummy instance, fixture transport)
+
+from ecc_core.llm import fake_anthropic  # noqa: E402
+from ecc_core.plugin import context_for as _ctx  # noqa: E402
+
+from ecc_incident.providers import ClaudeLabeller  # noqa: E402
+from ecc_incident.servicenow import (AT_ALERT_FIELDS, OUTCOME_FIELDS, MockLabeller, OutcomeInput,  # noqa: E402
+                                     pull, validate_labels)
+
+SN_EXPECTED = {"INC0010987": "config_change", "INC0010995": "traffic_spike", "INC0011003": "dependency_failure",
+               "INC0011011": "slow_query", "INC0011019": "certificate_expiry", "INC0011024": "resource_leak"}
+
+
+@pytest.fixture(scope="module")
+def sn_pull(tmp_path_factory):
+    out = tmp_path_factory.mktemp("sn")
+    return pull(CTX.servicenow(), CTX.settings["servicenow_query"], out, MockLabeller())
+
+
+def test_alert_time_and_outcome_fields_are_disjoint():
+    assert set(AT_ALERT_FIELDS) & set(OUTCOME_FIELDS) == {"number"}
+
+
+def test_servicenow_files_carry_no_outcome(sn_pull):
+    texts = {p.stem: p.read_text(encoding="utf-8") for p in (sn_pull.out_dir / "incidents").glob("*.json")}
+    assert len(texts) == 8
+    for text in texts.values():
+        for leak in ("close_notes", "resolved_at", "PRB0040123", "Root cause", "Index created", "Restarted pods",
+                     "CHG0030415", "Hunter2"):                 # outcome fields, the fix change, the secret
+            assert leak not in text
+    assert "CHG0030411" in texts["INC0010987"]                 # the change before opening is kept
+    assert "sms-provider" in texts["INC0011003"]               # upstream incident via CMDB relationship
+
+
+def test_servicenow_labels_and_analysis(sn_pull):
+    assert {k: v["cause_category"] for k, v in sn_pull.labels.items()} == SN_EXPECTED
+    assert set(sn_pull.unlabelled) == {"INC0011036", "INC0011039"}       # notes state no cause
+    assert all(v["quote"] for v in sn_pull.labels.values())
+    analysis = (sn_pull.out_dir / "analysis.md").read_text(encoding="utf-8")
+    assert "membership-api**: INC0010987, INC0011036" in analysis and "do not state a cause" in analysis
+
+
+def test_label_validation_needs_a_verbatim_quote():
+    inp = OutcomeInput({"INC1": "Expired TLS certificate. Rotated.", "INC2": "Restarted pods.", "INC3": "Bad config."})
+    raw = {"labels": [{"incident_id": "INC1", "cause_category": "certificate_expiry", "quote": "Expired TLS certificate."},
+                      {"incident_id": "INC2", "cause_category": "resource_leak", "quote": "Memory leak in cache."},
+                      {"incident_id": "INC3", "cause_category": "gremlins", "quote": "Bad config."}]}
+    labels, unlabelled, rejected = validate_labels(raw, inp)
+    assert list(labels) == ["INC1"] and set(unlabelled) == {"INC2", "INC3"} and len(rejected) == 2
+
+
+def test_servicenow_replay_scores_honestly(sn_pull, tmp_path):
+    result = replay_run(sn_pull.out_dir / "incidents", sn_pull.out_dir / "labels.json", RUNBOOKS, MockProvider(),
+                        tmp_path, GATES, limits(CTX))
+    m = result["metrics"]
+    assert m["incidents"] == 6 and m["correct"] == 4                     # unlabelled tickets are not scored
+    assert m["false_confident_leads"] == 0 and m["actions_executed"] == 0
+    assert {c["incident_id"] for c in result["cases"] if not c["correct"]} == {"INC0010987", "INC0010995"}
+    assert all(c["predicted"] == "unknown" for c in result["cases"] if not c["correct"])   # missed, not wrong
+    assert m["secrets_redacted"] == 0 and m["injection_lines_flagged"] == 1  # redacted at pull, flagged at build
+    pulled = [e for e in AuditLog(sn_pull.out_dir / "audit.jsonl").entries() if e["action"] == "secret.redacted"]
+    assert [e["target"] for e in pulled] == ["INC0010987"]               # the redaction is recorded where it happened
+
+
+def test_claude_labeller_request_shape():
+    inp = OutcomeInput({"INC1": "Expired TLS certificate."})
+    calls = {}
+    payload = {"labels": [{"incident_id": "INC1", "cause_category": "certificate_expiry", "quote": "Expired TLS certificate."}]}
+    out = ClaudeLabeller(ClaudeClient(client=fake_anthropic(payload, calls))).label_outcomes(inp)
+    assert out == payload and '<notes incident="INC1">' in calls["messages"][0]["content"]
+    assert calls["output_config"]["format"]["schema"]["properties"]["labels"]["items"]["properties"]["cause_category"]["enum"]
+
+
+def test_cli_servicenow(tmp_path, capsys):
+    from ecc_core.cli import main as ecc
+    out = str(tmp_path / "sn")
+    assert ecc(["--config", str(CONFIG), "incident", "servicenow", "pull", "--out", out]) == 0
+    assert ecc(["--config", str(CONFIG), "incident", "servicenow", "replay", "--out", out]) == 1   # 4/6 < 75% gate
+    text = capsys.readouterr().out
+    assert "dev00000.service-now.com (fixture): 8 incident(s) pulled" in text and "Missed but not wrong" in text

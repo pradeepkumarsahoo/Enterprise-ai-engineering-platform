@@ -23,6 +23,7 @@ core/                          ecc-core: shared platform code, no use-case logic
     safety.py                  secret redaction and prompt-injection flagging
     audit.py                   append-only JSON Lines audit log
     sources.py                 read-only sources shared by several use cases (runbooks)
+    servicenow.py              read-only ServiceNow connector: REST Table API or fixtures
   tests/
 use-cases/
   incident-investigation/      ecc-incident     · use case 1
@@ -79,6 +80,7 @@ Everything configurable lives in [`config/product.toml`](../config/product.toml)
 | `[product]` | Name, environment, repository root, where outputs go |
 | `[model]` | Default provider (`mock` or `claude`), Claude model, effort, max tokens, refusal fallbacks |
 | `[sources]` | Read-only sources shared by several use cases |
+| `[connectors.servicenow]` | ServiceNow instance URL, transport (`fixture` or `http`), credential variable names, timeout, page size, record cap |
 | `[use_cases.<key>]` | `enabled`, and `module`: the package that implements it |
 | `[use_cases.<key>.paths]` | That use case's data |
 | `[use_cases.<key>.settings]` | Its thresholds, such as the stale-runbook age or the NFR assessment margins |
@@ -126,6 +128,15 @@ Nothing in core changes.
 Set `provider = "claude"` in `[model]`, `ECC_PROVIDER=claude`, or pass `--provider claude` to a
 command. Credentials come from `ANTHROPIC_API_KEY` or an `ant auth login` profile. Each task is one
 request with structured JSON output and no tools. These calls cost money.
+
+## Connecting ServiceNow
+
+`ctx.servicenow()` gives a use case a read-only client: `get(table, query, fields)` against the
+REST Table API, GET only, tables on an allow-list, records capped. Out of the box the URL is a
+dummy instance and `transport = "fixture"` reads `shared-data/synthetic/servicenow/`. For a real
+instance: set `url`, `transport = "http"`, and export `ECC_SERVICENOW_TOKEN` (or
+`ECC_SERVICENOW_USER` and `ECC_SERVICENOW_PASSWORD`) for a read-only integration user whose time
+zone is UTC. Credentials never go in the configuration file.
 
 ## Adding a real data source
 

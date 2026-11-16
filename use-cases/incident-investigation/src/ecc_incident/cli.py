@@ -4,6 +4,7 @@
     ecc incident investigate <incident.json> [--json]
     ecc incident replay [--out DIR]
     ecc incident shadow run | feedback <ID> ... | report
+    ecc incident servicenow pull | replay [--out DIR]
 
 Data locations, confidence limits and pilot gates come from
 [use_cases.incident] in the product configuration.
@@ -75,6 +76,36 @@ def register(p: argparse.ArgumentParser, ctx: Context) -> None:
         print(json.dumps(shadow(a).report(), indent=2))
         return 0
 
+    def sn_pull(a):
+        from .providers import get_labeller
+        from .servicenow import pull
+        name = ctx.provider_name(a.provider)
+        out = Path(a.out) if a.out else ctx.runs / "servicenow" / f"{name}-{datetime.now():%Y%m%d-%H%M%S}"
+        client = ctx.servicenow()
+        return pull(client, ctx.settings["servicenow_query"], out, get_labeller(name, ctx.claude)), client
+
+    def cmd_sn_pull(a) -> int:
+        r, client = sn_pull(a)
+        print(f"{client.instance} ({client.settings.transport}): {len(r.incidents)} incident(s) pulled, "
+              f"{len(r.labels)} with a cause stated in the resolution notes, {len(r.unlabelled)} without, "
+              f"{len(r.rejected_labels)} label(s) rejected.")
+        print(f"Incident files (alert-time fields only): {r.out_dir / 'incidents'}")
+        print(f"Labels (scoring only): {r.out_dir / 'labels.json'}")
+        print(f"Analysis: {r.out_dir / 'analysis.md'}")
+        return 0
+
+    def cmd_sn_replay(a) -> int:
+        from .replay import run
+        r, client = sn_pull(a)
+        result = run(r.out_dir / "incidents", r.out_dir / "labels.json", ctx.source("runbooks"),
+                     provider(ctx, a.provider), r.out_dir / "replay", ctx.gates, limits(ctx))
+        print((r.out_dir / "analysis.md").read_text(encoding="utf-8"))
+        print((r.out_dir / "replay" / "report.md").read_text(encoding="utf-8"))
+        print("Note: ServiceNow holds tickets and change records, not metrics, logs or config diffs. Causes that "
+              "need those are reported as not established; connect monitoring and the deploy pipeline to close the gap.")
+        print(f"Source: {client.instance} ({client.settings.transport}). Full results: {r.out_dir}")
+        return 0 if result["passed"] else 1
+
     i = sub.add_parser("investigate", help="Investigate one incident file")
     i.add_argument("incident")
     i.add_argument("--provider", choices=PROVIDERS)
@@ -102,3 +133,12 @@ def register(p: argparse.ArgumentParser, ctx: Context) -> None:
     sf.set_defaults(fn=cmd_shadow_feedback)
     sp = ssub.add_parser("report", help="Usefulness and agreement so far")
     sp.set_defaults(fn=cmd_shadow_report)
+
+    sn = sub.add_parser("servicenow", help="Replay on past incidents read from ServiceNow (read-only)")
+    snsub = sn.add_subparsers(dest="servicenow_cmd", required=True)
+    for name, fn, help_ in (("pull", cmd_sn_pull, "Read closed incidents; write alert-time files, labels and an analysis"),
+                            ("replay", cmd_sn_replay, "Pull, then replay the investigator and score it against the labels")):
+        c = snsub.add_parser(name, help=help_)
+        c.add_argument("--provider", choices=PROVIDERS, help="used for both the labeller and the investigator")
+        c.add_argument("--out", help="output folder (default: <runs>/incident/servicenow/<provider>-<time>)")
+        c.set_defaults(fn=fn)

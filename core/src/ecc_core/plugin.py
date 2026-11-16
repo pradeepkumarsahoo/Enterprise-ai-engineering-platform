@@ -23,6 +23,7 @@ from typing import Callable
 
 from .config import ENV_PROVIDER, Config, ConfigError, UseCaseConfig
 from .llm import ClaudeClient
+from .servicenow import ServiceNowClient
 
 
 @dataclass
@@ -78,6 +79,11 @@ class Context:
 
     def claude(self) -> ClaudeClient:
         return ClaudeClient(self.config.model)
+
+    def servicenow(self) -> ServiceNowClient:
+        if self.config.servicenow is None:
+            raise ValueError("ServiceNow is not configured: add [connectors.servicenow] to the product configuration")
+        return ServiceNowClient(self.config.servicenow)
 
 
 def load_use_case(config: Config, section: UseCaseConfig, check_paths: bool = False) -> Context:
