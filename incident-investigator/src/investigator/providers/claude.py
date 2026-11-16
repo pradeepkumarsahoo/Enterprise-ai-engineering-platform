@@ -1,7 +1,7 @@
 # Author: Pradeep Sahoo
 """Claude provider, via the official Anthropic Python SDK.
 
-Used by both use cases through `complete_json`: one structured-output request
+Used by all three use cases through `complete_json`: one structured-output request
 per task. The model gets no tools, so it cannot query, change or notify
 anything. Inputs are gathered by code before the call; every citation in the
 reply is checked by code after it.
@@ -79,3 +79,8 @@ class ClaudeProvider:
     def draft_runbook_edits(self, inp) -> dict:
         from ..knowledge.drafting import EDIT_SCHEMA, EDIT_SYSTEM_PROMPT, render_edit_request
         return self.complete_json(EDIT_SYSTEM_PROMPT, render_edit_request(inp), EDIT_SCHEMA)
+
+    # Use case 3 ------------------------------------------------------------------
+    def draft_architecture(self, inp) -> dict:
+        from ..architecture.drafting import DRAFT_SCHEMA, DRAFT_SYSTEM_PROMPT, render_draft_request
+        return self.complete_json(DRAFT_SYSTEM_PROMPT, render_draft_request(inp), DRAFT_SCHEMA)

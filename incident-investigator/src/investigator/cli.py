@@ -1,8 +1,9 @@
 # Author: Pradeep Sahoo
-"""Command line for both use cases.
+"""Command line for the three use cases.
 
 Use case 1 (incident investigation): investigate | replay | shadow run | shadow feedback | shadow report
 Use case 2 (knowledge & runbooks):   knowledge run | knowledge evaluate | knowledge feedback | knowledge report
+Use case 3 (architecture & ADLC):    architecture run | architecture evaluate | architecture feedback | architecture report
 """
 from __future__ import annotations
 
@@ -110,8 +111,53 @@ def cmd_knowledge_report(a) -> int:
     return 0
 
 
+def _arch(a):
+    from .architecture import ArchitectureInputs
+    return ArchitectureInputs.load(Path(a.arch_dir))
+
+
+def cmd_architecture_run(a) -> int:
+    from .architecture import get_drafter
+    from .architecture.review import run
+    r = run(_arch(a), get_drafter(a.provider), Path(a.workdir))
+    traced = sum(t["status"] == "traced" for t in r["traceability"])
+    print(f"{r['requirement_id']}: preferred option {r['preferred'] or 'none'}, "
+          f"{'ADR ' + r['adr']['id'] + ' drafted' if r['adr'] else 'no ADR drafted'}, {len(r['stories'])} stories, "
+          f"{traced} of {len(r['traceability'])} NFRs traced, {len(r['open_questions'])} open question(s), "
+          f"{len(r['rejected_drafts'])} draft(s) rejected by validation.")
+    print(f"Proposal: {Path(a.workdir) / 'proposal' / (r['requirement_id'] + '.md')}  "
+          "(nothing was written to the ADR repository or the backlog)")
+    return 0
+
+
+def cmd_architecture_evaluate(a) -> int:
+    from .architecture import get_drafter
+    from .architecture.review import evaluate, run
+    out = Path(a.workdir)
+    result = run(_arch(a), get_drafter(a.provider), out)
+    labels = json.loads((Path(a.arch_dir) / "labels.json").read_text(encoding="utf-8"))
+    gates = json.loads(Path(a.gates).read_text(encoding="utf-8"))["architecture"]
+    ev = evaluate(result, labels, gates)
+    (out / "evaluation.md").write_text(ev["report_md"], encoding="utf-8")
+    print(ev["report_md"])
+    print(f"Full results: {out}")
+    return 0 if ev["passed"] else 1
+
+
+def cmd_architecture_feedback(a) -> int:
+    from .architecture.review import record_feedback
+    print(json.dumps(record_feedback(Path(a.workdir), a.item, a.accept == "yes", a.by, a.note or ""), indent=2))
+    return 0
+
+
+def cmd_architecture_report(a) -> int:
+    from .architecture.review import report
+    print(json.dumps(report(Path(a.workdir)), indent=2))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="investigator", description="Evidence-backed incident investigation (read-only).")
+    p = argparse.ArgumentParser(prog="investigator", description="Engineering Command Centre pilot: incident investigation, knowledge & runbooks, architecture & ADLC.")
     p.add_argument("--runbooks", default=str(DATA / "runbooks.json"))
     sub = p.add_subparsers(dest="cmd", required=True)
 
@@ -166,6 +212,26 @@ def build_parser() -> argparse.ArgumentParser:
     kf.set_defaults(fn=cmd_knowledge_feedback)
     kp = ksub.add_parser("report", help="Findings and edit acceptance so far")
     kp.set_defaults(fn=cmd_knowledge_report)
+
+    ar = sub.add_parser("architecture", help="Use case 3: option assessment, ADR and stories from a requirement")
+    ar.add_argument("--arch-dir", default=str(DATA / "architecture"))
+    ar.add_argument("--workdir", default=str(RUNS / "architecture"))
+    asub = ar.add_subparsers(dest="architecture_cmd", required=True)
+    arr = asub.add_parser("run", help="Assess options, draft the ADR and stories, write the proposal pack")
+    arr.add_argument("--provider", default="mock", choices=["mock", "claude"])
+    arr.set_defaults(fn=cmd_architecture_run)
+    are = asub.add_parser("evaluate", help="Run, then score against labels and pilot gates")
+    are.add_argument("--provider", default="mock", choices=["mock", "claude"])
+    are.add_argument("--gates", default=str(HOME / "config" / "pilot_gates.json"))
+    are.set_defaults(fn=cmd_architecture_evaluate)
+    arf = asub.add_parser("feedback", help="Review board approves or rejects the ADR; product owner a story")
+    arf.add_argument("item", help="ADR id (e.g. ADR-007) or story id (e.g. STORY-02)")
+    arf.add_argument("--accept", required=True, choices=["yes", "no"])
+    arf.add_argument("--by", required=True)
+    arf.add_argument("--note")
+    arf.set_defaults(fn=cmd_architecture_feedback)
+    arp = asub.add_parser("report", help="Approvals so far")
+    arp.set_defaults(fn=cmd_architecture_report)
     return p
 
 

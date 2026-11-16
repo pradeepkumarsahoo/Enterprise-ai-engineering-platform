@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "incident-investigator"
 version = "0.1.0"
-description = "Engineering Command Centre pilot: incident investigation (replay + shadow) and knowledge & runbooks"
+description = "Engineering Command Centre pilot: incident investigation (replay + shadow), knowledge & runbooks, and architecture & ADLC"
 requires-python = ">=3.10"
 authors = [{ name = "Pradeep Sahoo" }]
 readme = "README.md"

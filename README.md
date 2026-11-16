@@ -17,9 +17,10 @@ a governed AI layer for the software lifecycle and production operations.
 > Independently developed reference concept. All data shown is synthetic, and the prototype uses a
 > deterministic mock AI provider. Nothing here is a production outcome.
 
-**Code:** the first two use cases are implemented in [`incident-investigator/`](incident-investigator/).
+**Code:** the first three use cases are implemented in [`incident-investigator/`](incident-investigator/).
 1. **Incident investigation:** on past incidents first, then alongside on-call engineers.
 2. **Knowledge & runbooks:** stale runbooks, repeat incidents and drafted fixes.
+3. **Architecture & ADLC:** options scored against NFRs, a drafted ADR and stories, NFR traceability.
 
 See [section 5](#5-implementation) for what is built and
 [section 6](#6-decisions-and-trade-offs-made-during-development) for the decisions behind it.
@@ -332,15 +333,16 @@ an onboarding pack and a practice incident.
 ## 5. Implementation
 
 Code: [`incident-investigator/`](incident-investigator/) · Python 3.10+ · core uses the standard
-library only · 32 automated tests · builds as an installable wheel. Two use cases are implemented, in
-priority order:
+library only · 51 automated tests · builds as an installable wheel. Three use cases are implemented,
+in priority order:
 
 | # | Use case | Status | What it proves |
 |---|----------|--------|----------------|
 | 1 | Incident investigation, on past incidents then in shadow mode | Implemented | Evidence-backed diagnosis is accurate and useful, with zero risk |
 | 2 | Knowledge & runbooks | Implemented | The same platform stops incidents repeating: stale runbooks fixed, follow-ups chased |
+| 3 | Architecture & ADLC | Implemented | Design choices are scored against NFRs in code, and drafts cannot invent figures |
 
-Both share the same building blocks: read-only sources, evidence numbered in code, a deterministic
+All three share the same building blocks: read-only sources, evidence numbered in code, a deterministic
 first pass, one structured model call with no tools, validation in code, policy-set approvals, an
 append-only audit log and an evaluation against held-out labels.
 
@@ -437,28 +439,83 @@ review queues for
 [Membership & Identity](incident-investigator/reports/knowledge-review-membership-identity.md) and
 [Loyalty](incident-investigator/reports/knowledge-review-loyalty.md).
 
-> **Read both results with care.** The synthetic data was written alongside the rules, so these
+> **Read these results with care.** The synthetic data was written alongside the rules, so these
 > results show the pipelines work end to end. They do **not** predict accuracy on real data. The
 > numbers that matter come from real incidents and real runbooks during the pilot, run with the
 > Claude provider against the placeholder gates in
 > [`config/pilot_gates.json`](incident-investigator/config/pilot_gates.json).
 
-### 5.3 What is built, and what is not yet
+### 5.3 Use case 3 — Architecture & ADLC
+
+**Why third.** It moves the platform from operations into the start of the lifecycle, still at zero
+risk: it reads a requirement and drafts a proposal, and people approve every decision. It reuses the
+same evidence, provider, validation, audit and evaluation pattern, and adds three sources most
+organisations already have: a requirements intake form, a reference pattern library and the ADR
+repository. Use cases 1 and 2 deal with failures after release; this one brings residency, recovery
+and other NFRs into the design before any code is written.
+
+```mermaid
+flowchart LR
+    A[Read-only sources<br/>structured requirement · NFRs<br/>pattern library · existing ADRs] --> B[Assessment in code<br/>every option vs every NFR<br/>meets · at risk · fails · unknown]
+    B --> C[Ranking + checks in code<br/>must-NFR failure rejects<br/>ADR conflicts · open questions]
+    C --> D[Model call<br/>drafts ADR wording + user stories only]
+    D --> E[Validation in code<br/>no rejected option · all alternatives<br/>no invented figures · targets quoted]
+    E --> F[NFR traceability<br/>component · mechanism · ADRs · stories]
+    F --> G[Proposal pack<br/>review board approves ADR<br/>product owner approves stories]
+    G --> H[Evaluation vs labels<br/>pilot gates]
+    B -.-> L[(Append-only<br/>audit log)]
+    E -.-> L
+    G -.-> L
+```
+
+1. **Read.** A structured requirement: capabilities, regions, NFRs with priority and target, open
+   business decisions and stakeholder notes. The reference patterns with their published estimates,
+   and the existing ADRs with their status.
+2. **Assess (code).** Each pattern is scored against each NFR with a fixed rule per NFR category.
+   For example, availability within 0.05 points of target is at risk, and throughput is computed per
+   cell × number of regions. An NFR with no agreed target is **unknown** and is never guessed.
+3. **Rank and check (code).** An option that fails a must-have NFR is rejected, and the result says
+   when it would become viable (for example, "viable only for a single-region launch"). The rest are
+   ranked by risk, conflicts with **accepted** ADRs and cost. Superseded ADRs are ignored. Missing
+   targets and undecided business questions become open questions. The next ADR number is assigned.
+4. **Draft (model).** One call drafts the ADR (context, decision, consequences, one entry per
+   alternative) and user stories with acceptance criteria, citing evidence (A1, A2, …).
+5. **Validate (code).** A draft is rejected if the ADR chooses a rejected option or skips an
+   alternative, if any text states a **figure that is not in the evidence**, if a story traces to an
+   unknown capability or NFR, if its acceptance criteria don't state the NFR's numeric target, or if it
+   cites no real evidence other than flagged notes. If the ADR chooses a viable option other than the
+   preferred one, it is kept and the disagreement is flagged for the review board.
+6. **Trace and review.** Each NFR is traced to a component, a mechanism, ADRs and stories, or shown
+   as a gap with the reason. The proposal pack goes to the architecture review board (ADR) and the
+   product owner (stories). Nothing is written to the ADR repository or the backlog.
+
+**Result (mock provider):** **44 of 44** assessment cells as expected, across 4 patterns × 11 NFRs.
+PAT-A (regional cells + event-sourced ledger) is preferred and PAT-D is viable but conflicts with
+ADR-005. PAT-B is rejected on residency (viable only for a single-region launch) and PAT-C on RPO,
+residency and idempotency. ADR-007 was drafted with 6 stories covering all 6 capabilities, and
+**9 of 11** NFRs are traced. The 2 gaps (cost ceiling, DR test cadence) have no agreed target and
+become open questions, as in the prototype screen. 0 drafts rejected, 0 invented figures. 1 workshop
+note was flagged as instructions and its API key redacted. Reports:
+[`architecture-evaluation-mock.md`](incident-investigator/reports/architecture-evaluation-mock.md) ·
+proposal pack [`architecture-proposal-REQ-LOY-001.md`](incident-investigator/reports/architecture-proposal-REQ-LOY-001.md).
+
+### 5.4 What is built, and what is not yet
 
 | Area | Built | Not yet |
 |------|-------|---------|
 | Data sources | Read-only interfaces + fixture adapters for every source | Adapters for real tools: deploy pipeline, Prometheus, log search, Jira/ServiceNow, runbook wiki, team directory |
 | Use case 1 | Evidence builder, 8 detectors, validation, replay, shadow mode, feedback and report | Traces, multi-service correlation, post-incident report drafting, webhook into the shadow inbox |
 | Use case 2 | 7 checks, repeat clusters, overdue actions, recommendations, drafted edits with validation, per-team review queue, feedback, evaluation | Publishing approved edits back to the wiki (deliberately not built), reading the wiki's revision history |
-| Model | Mock (default) and Claude Opus 5.5 provider shared by both use cases; request shape tested offline | A paid replay run with Claude. Commands are ready: `replay --provider claude`, `knowledge evaluate --provider claude` |
+| Use case 3 | Option-by-NFR assessment, ranking, ADR conflicts, open questions, drafted ADR and stories with validation, NFR traceability, proposal pack, approver feedback, evaluation | Container diagrams, cost estimates (left to Licensing & TCO), writing approved ADRs and stories to the repository or Jira (deliberately not built) |
+| Model | Mock (default) and Claude Opus 5.5 provider shared by all three use cases; request shape tested offline | A paid replay run with Claude. Commands are ready: `replay --provider claude`, `knowledge evaluate --provider claude`, `architecture evaluate --provider claude` |
 | Governance | Policy-set risk and approval, append-only audit, secret redaction, injection flagging | Approval workflow and UI from the prototype; tamper-evident audit storage |
-| Quality | 32 tests, compile check, static import check, wheel build + install verified in a clean virtualenv | CI pipeline |
+| Quality | 51 tests, compile check, static import check, wheel build + install verified in a clean virtualenv | CI pipeline |
 
-### 5.4 Build, test and run
+### 5.5 Build, test and run
 
 ```bash
 cd incident-investigator
-python -m pytest                                   # 32 tests, no network
+python -m pytest                                   # 51 tests, no network
 
 # bash / Git Bash  (PowerShell: $env:PYTHONPATH="src")
 export PYTHONPATH=src
@@ -475,6 +532,11 @@ python -m investigator knowledge evaluate          # run checks + drafts, score 
 python -m investigator knowledge feedback EDIT-RB-017-3-replace --accept yes --by ria.owner
 python -m investigator knowledge report
 
+# Use case 3: architecture & ADLC
+python -m investigator architecture evaluate       # assess options, draft ADR + stories, score against labels
+python -m investigator architecture feedback ADR-007 --accept yes --by arb.chair
+python -m investigator architecture report
+
 # Build an installable wheel
 pip wheel . --no-deps -w dist
 
@@ -482,13 +544,14 @@ pip wheel . --no-deps -w dist
 pip install -e ".[claude]"
 python -m investigator replay --provider claude
 python -m investigator knowledge evaluate --provider claude
+python -m investigator architecture evaluate --provider claude
 ```
 
 ---
 
 ## 6. Decisions and trade-offs made during development
 
-### 6.1 Shared by both use cases
+### 6.1 Shared by all three use cases
 
 | Decision | Chosen | Alternative considered | Why |
 |----------|--------|------------------------|-----|
@@ -498,14 +561,14 @@ python -m investigator knowledge evaluate --provider claude
 | Citations | Every evidence ID checked in code; invalid claims removed and **counted** | Trust the model's citations | "Unsupported claims" and "rejected edits" become measured metrics |
 | Default provider | Deterministic mock; Claude is opt-in | Claude by default | Free, reproducible tests and demos. Real model quality is measured deliberately |
 | Model | Claude Opus 5.5 at effort `high`, structured JSON output, server-side refusal fallback | A cheaper model such as Claude Sonnet 5.5 | Low volume, high stakes. Replay and evaluation make it cheap to compare a cheaper model later on the same data |
-| One provider class | `complete_json` shared by both use cases | A client per use case | One place for model settings, error handling and refusal handling |
+| One provider class | `complete_json` shared by all three use cases | A client per use case | One place for model settings, error handling and refusal handling |
 | Untrusted text | Redact secrets, flag injection, wrap evidence as data, give the model no tools | Rely on the system prompt alone | Defence in depth: even a successful injection has nothing to act on |
 | Approval | Set by policy tables in code | Let the model rate risk | The model cannot lower risk or skip approval; unknown action types default to the highest risk |
 | Labels | Separate files that the pipelines never read | Labels next to the input data | Prevents the answer leaking into the result; a test enforces it for use case 1 |
 | Dependencies | Standard library only; `anthropic` optional | Frameworks (LangChain, pandas, a database) | Runs anywhere; fewer supply-chain and approval hurdles for a pilot |
 | Data access | JSON fixtures behind read-only interfaces | Connect real tools straight away | Proves the pipeline first; real adapters slot in behind the same interface |
 | Audit | Append-only JSON Lines with correlation IDs | Database or WORM storage | Simple and inspectable for a pilot; production moves it to tamper-evident storage |
-| Packaging | One package, two use cases, one CLI | A separate service per use case | Shared code stays shared; split into services once there is real load |
+| Packaging | One package, three use cases, one CLI | A separate service per use case | Shared code stays shared; split into services once there is real load |
 
 ### 6.2 Use case 1 — Incident investigation
 
@@ -531,7 +594,22 @@ python -m investigator knowledge evaluate --provider claude
 | Thresholds | Stale after 180 days; repeat if the same cause recurs within 90 days of the previous one | A fixed 90-day window from today | Linking consecutive incidents catches a pattern across Aug–Nov that a fixed window would split |
 | Evaluation date | Fixed `as_of` date stored in the data | Today's date | Results are reproducible; in production `as_of` is the run date |
 
-### 6.4 Decisions made while building
+### 6.4 Use case 3 — Architecture & ADLC
+
+| Decision | Chosen | Alternative considered | Why |
+|----------|--------|------------------------|-----|
+| Who designs the options | The architecture team's reference patterns, scored in code | Ask the model to invent architectures | Options stay within what the organisation can build and support; scoring is repeatable and explainable |
+| How options are compared | One fixed rule per NFR category, every cell cited as evidence | Model judges fit | The comparison table is identical on every run and each cell shows its figures |
+| Rejection | Failing any must-have NFR rejects an option, with the condition under which it would become viable | Weighted total score | A weighted score can hide a residency failure behind good latency; a rejection with a condition is easier to discuss |
+| Missing targets | "Unknown", shown as a gap and turned into an open question | Assume a typical target | A guessed cost ceiling looks like a requirement; an open question gets it decided |
+| Model disagrees with the ranking | Kept and flagged for the review board; a rejected option is never accepted | Reject any disagreement | The ranking is a rule set, not the final word, but a must-have failure is not negotiable in a draft |
+| Invented figures | Any number in drafted text must appear in the evidence | Trust the drafted numbers | ADRs and acceptance criteria are where invented numbers do lasting harm; the count becomes a measured metric |
+| Acceptance criteria | Must state each covered NFR's numeric target | Free-form criteria | Makes stories testable against the NFR and traceability checkable in code |
+| Approvals | ADR by the architecture review board, each story by the product owner | One approval for the whole pack | Matches who owns each decision today |
+| Output | Proposal pack in Markdown; no write to the ADR repository or Jira | Open a pull request on the ADR repository | Zero risk during the pilot; a pull request is the natural next step once drafts are trusted |
+| Cost | Relative cost from the pattern library only | Estimate cloud cost here | Cost estimates belong to Licensing & TCO with open formulas; until a ceiling is agreed, cost is an open question |
+
+### 6.5 Decisions made while building
 
 | Situation | Decision | Why |
 |-----------|----------|-----|
@@ -541,7 +619,7 @@ python -m investigator knowledge evaluate --provider claude
 | `setuptools>=68` failed on the local Python (65.5) | Build requirement lowered to `setuptools>=61`, the first version with `pyproject.toml` support | The wheel builds on older toolchains too |
 | No linter installed locally | Compile check and a standard-library static import check, rather than installing tools into the user's environment | Keeps the build dependency-free; add `ruff` in CI later |
 | An installed wheel doesn't include the sample data | Paths are CLI options; defaults point at the repository's `data/` | Running from the repository works out of the box; production passes real paths |
-| Mock results looked perfect (8/8, 9/9) | Stated plainly in the README and in every generated report | The synthetic data was written alongside the rules; perfect scores prove the plumbing, not accuracy |
+| Mock results looked perfect (8/8, 9/9, 44/44) | Stated plainly in the README and in every generated report | The synthetic data was written alongside the rules; perfect scores prove the plumbing, not accuracy |
 
 ---
 

@@ -1,0 +1,34 @@
+{
+  "_meta": {
+    "author": "Pradeep Sahoo",
+    "generated_by": "scripts/generate_synthetic_data.py",
+    "synthetic": true
+  },
+  "adrs": [
+    {
+      "id": "ADR-003",
+      "title": "Shared relational database per domain",
+      "status": "superseded",
+      "superseded_by": "ADR-005",
+      "date": "2025-02-10"
+    },
+    {
+      "id": "ADR-004",
+      "title": "PII encrypted per region with regional keys",
+      "status": "accepted",
+      "date": "2025-06-02"
+    },
+    {
+      "id": "ADR-005",
+      "title": "Event sourcing for the loyalty ledger",
+      "status": "accepted",
+      "date": "2025-09-18"
+    },
+    {
+      "id": "ADR-006",
+      "title": "Cell-based routing at the API gateway",
+      "status": "accepted",
+      "date": "2026-01-27"
+    }
+  ]
+}

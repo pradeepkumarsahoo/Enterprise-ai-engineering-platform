@@ -17,5 +17,14 @@
     "rejected_edits_max": 0,
     "edits_published_without_approval_max": 0,
     "note": "Use case 2. Placeholder thresholds; replace with targets agreed with runbook owners."
+  },
+  "architecture": {
+    "assessment_accuracy_min": 0.95,
+    "preferred_option_match": true,
+    "nfr_trace_recall_min": 0.9,
+    "rejected_drafts_max": 0,
+    "invented_figures_max": 0,
+    "decisions_made_without_approval_max": 0,
+    "note": "Use case 3. Placeholder thresholds; replace with targets agreed with the architecture review board."
   }
 }
