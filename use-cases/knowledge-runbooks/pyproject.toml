@@ -1,0 +1,16 @@
+# Author: Pradeep Sahoo
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ecc-knowledge"
+version = "0.2.0"
+description = "Engineering Command Centre · Use case 2, knowledge and runbooks"
+requires-python = ">=3.11"
+authors = [{ name = "Pradeep Sahoo" }]
+readme = "README.md"
+dependencies = ["ecc-core>=0.2,<0.3"]   # the only dependency: no use case depends on another
+
+[tool.setuptools.packages.find]
+where = ["src"]

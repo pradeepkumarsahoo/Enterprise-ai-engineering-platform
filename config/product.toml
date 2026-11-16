@@ -1,0 +1,97 @@
+# Engineering Command Centre · product configuration
+# Author: Pradeep Sahoo
+#
+# One file configures the whole product: which use cases are switched on, the model,
+# shared sources, and each use case's data, thresholds and pilot gates.
+#
+# Check it with:   python ecc.py config validate
+# See the result:  python ecc.py config show
+#
+# Precedence: command-line flag > environment variable > this file > default in code.
+# Environment overrides: ECC_CONFIG (this file's location), ECC_PROVIDER, ECC_MODEL.
+# Relative paths are resolved against [product].root, which is relative to this file.
+# Unknown keys and wrong types are errors, so a typo cannot silently fall back to a default.
+
+[product]
+name = "Engineering Command Centre"
+environment = "pilot"          # pilot | production (informational)
+root = ".."                    # the repository root
+runs_dir = "runs"              # outputs: runs/<use case>/... (git-ignored)
+
+[model]
+provider = "mock"              # mock (free, deterministic) | claude (costs money; needs ANTHROPIC_API_KEY)
+claude_model = "claude-opus-5-5"
+effort = "high"                # low | medium | high | xhigh | max
+max_tokens = 16000
+fallbacks = "default"          # server-side refusal fallback; "" turns it off
+
+# Read-only sources shared by more than one use case.
+[sources]
+runbooks = "shared-data/synthetic/runbooks.json"
+
+# ------------------------------------------------------------------ use case 1
+[use_cases.incident]
+enabled = true
+module = "ecc_incident"
+
+[use_cases.incident.paths]
+incidents = "use-cases/incident-investigation/data/synthetic/incidents"
+labels = "use-cases/incident-investigation/data/synthetic/labels.json"      # scoring only; never read by the investigator
+live = "use-cases/incident-investigation/data/synthetic/live"               # shadow-mode inbox
+
+[use_cases.incident.settings]
+lead_confidence_min = 0.5      # below this, the answer is "cause not established"
+max_confidence = 0.95          # no hypothesis is ever shown as certain
+
+[use_cases.incident.gates]
+lead_accuracy_min = 0.75
+false_confident_leads_max = 0
+unsupported_claims_max = 0
+actions_executed_max = 0
+note = "Use case 1. Placeholder thresholds; replace with targets agreed after the baseline."
+
+# ------------------------------------------------------------------ use case 2
+[use_cases.knowledge]
+enabled = true
+module = "ecc_knowledge"
+
+[use_cases.knowledge.paths]
+knowledge_dir = "use-cases/knowledge-runbooks/data/synthetic"
+
+[use_cases.knowledge.settings]
+stale_days = 180               # a runbook not validated for this long is stale
+drift_lookback_days = 180      # incidents considered for practice drift and coverage gaps
+repeat_gap_days = 90           # the same cause again within this many days is a repeat
+repeat_lookback_days = 180     # the latest incident of a repeat cluster must be this recent
+
+[use_cases.knowledge.gates]
+findings_recall_min = 0.8
+findings_precision_min = 0.8
+repeat_clusters_exact = true
+rejected_edits_max = 0
+edits_published_without_approval_max = 0
+note = "Use case 2. Placeholder thresholds; replace with targets agreed with runbook owners."
+
+# ------------------------------------------------------------------ use case 3
+[use_cases.architecture]
+enabled = true
+module = "ecc_architecture"
+
+[use_cases.architecture.paths]
+arch_dir = "use-cases/architecture-adlc/data/synthetic"
+
+[use_cases.architecture.settings]
+availability_margin = 0.05     # within this many points below target = at risk
+latency_margin = 1.2           # up to 20% over the latency target = at risk
+throughput_margin = 0.8        # at least 80% of the throughput target = at risk
+mermaid_url = "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs"
+
+[use_cases.architecture.gates]
+assessment_accuracy_min = 0.95
+preferred_option_match = true
+nfr_trace_recall_min = 0.9
+rejected_drafts_max = 0
+invented_figures_max = 0
+decisions_made_without_approval_max = 0
+diagram_issues_max = 0
+note = "Use case 3. Placeholder thresholds; replace with targets agreed with the architecture review board."

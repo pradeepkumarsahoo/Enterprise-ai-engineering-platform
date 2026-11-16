@@ -1,0 +1,24 @@
+flowchart TB
+    member_apps["Member apps<br/>Web, mobile, POS"]
+    subgraph edge["Global edge"]
+        direction TB
+        api_gateway["API gateway<br/>Auth, rate limits, cell routing<br/>NFR-01 · NFR-05 · NFR-09"]
+    end
+    subgraph cell["Cell per region: EU, US, APAC"]
+        direction LR
+        membership_api["Membership API<br/>Identity, status<br/>NFR-02 · NFR-06"]
+        loyalty_ledger["Loyalty ledger<br/>Append-only, idempotent<br/>NFR-03 · NFR-04 · NFR-08"]
+        promotion_engine["Promotion engine<br/>Rule evaluation"]
+        event_bus["Event bus<br/>Accrual and redemption events"]
+        notification_worker["Notification worker<br/>Async member messages"]
+        audit_store["Audit store<br/>Ledger and admin actions<br/>NFR-07"]
+    end
+    member_apps -->|HTTPS| api_gateway
+    api_gateway -->|routes to home cell| membership_api
+    api_gateway -->|accrual, redemption| loyalty_ledger
+    loyalty_ledger -->|ledger events| event_bus
+    event_bus -->|accrual events| promotion_engine
+    promotion_engine -->|bonus points| loyalty_ledger
+    event_bus -->|member messages| notification_worker
+    event_bus -->|ledger events| audit_store
+    membership_api -->|admin actions| audit_store

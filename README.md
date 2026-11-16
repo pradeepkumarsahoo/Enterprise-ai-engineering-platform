@@ -17,10 +17,12 @@ a governed AI layer for the software lifecycle and production operations.
 > Independently developed reference concept. All data shown is synthetic, and the prototype uses a
 > deterministic mock AI provider. Nothing here is a production outcome.
 
-**Code:** the first three use cases are implemented in [`incident-investigator/`](incident-investigator/).
+**Code:** the first three use cases are implemented, one folder each under [`use-cases/`](use-cases/), on a
+shared [`core/`](core/), configured by [`config/product.toml`](config/product.toml).
 1. **Incident investigation:** on past incidents first, then alongside on-call engineers.
 2. **Knowledge & runbooks:** stale runbooks, repeat incidents and drafted fixes.
-3. **Architecture & ADLC:** options scored against NFRs, a drafted ADR and stories, NFR traceability.
+3. **Architecture & ADLC:** from a requirement document to options scored against NFRs, a drafted ADR
+   and stories, NFR traceability and a container diagram.
 
 See [section 5](#5-implementation) for what is built and
 [section 6](#6-decisions-and-trade-offs-made-during-development) for the decisions behind it.
@@ -248,6 +250,17 @@ review.
 
 ![Architecture](docs/stakeholder/screenshots/05-architecture.png)
 
+### Architecture & ADLC — from a requirement document (working code)
+Unlike the other screenshots, this one is not the prototype. It is the proposal page produced by the
+real code (use case 3, [section 5.3](#53-use-case-3--architecture--adlc)) from the sample
+[requirement document](use-cases/architecture-adlc/data/synthetic/requirement-document.md).
+On the left, the requirement extracted from the document, each NFR's target and whether it is traced,
+and the document flags (an API key redacted, an embedded instruction ignored). On the right, the
+container diagram of the preferred option, drawn in code from the pattern library, with each component
+labelled with the NFRs it satisfies. Regenerate with `python scripts/screenshot_architecture.py`.
+
+![Architecture from a requirement document](docs/stakeholder/screenshots/18-architecture-from-document.png)
+
 ### FinOps
 Monthly spend by team, a statistically flagged anomaly with its likely cause, and recommendations
 that track estimated and realised savings in separate columns.
@@ -332,15 +345,15 @@ an onboarding pack and a practice incident.
 
 ## 5. Implementation
 
-Code: [`incident-investigator/`](incident-investigator/) · Python 3.10+ · core uses the standard
-library only · 51 automated tests · builds as an installable wheel. Three use cases are implemented,
-in priority order:
+Code: [`core/`](core/) + one package per use case in [`use-cases/`](use-cases/) · Python 3.11+ ·
+standard library only · 93 automated tests · each package builds as an installable wheel. Three use
+cases are implemented, in priority order:
 
 | # | Use case | Status | What it proves |
 |---|----------|--------|----------------|
 | 1 | Incident investigation, on past incidents then in shadow mode | Implemented | Evidence-backed diagnosis is accurate and useful, with zero risk |
 | 2 | Knowledge & runbooks | Implemented | The same platform stops incidents repeating: stale runbooks fixed, follow-ups chased |
-| 3 | Architecture & ADLC | Implemented | Design choices are scored against NFRs in code, and drafts cannot invent figures |
+| 3 | Architecture & ADLC | Implemented | A requirement document becomes a reviewed design: options scored against NFRs in code, an ADR, stories and a diagram, with no invented figures |
 
 All three share the same building blocks: read-only sources, evidence numbered in code, a deterministic
 first pass, one structured model call with no tools, validation in code, policy-set approvals, an
@@ -385,8 +398,8 @@ flowchart LR
 **Result (mock provider):** **8 of 8** past incidents correct. That includes one unexplained
 incident, where the right answer is "cause not established". 0 unsupported claims, 0 actions
 executed, 1 injection line flagged, 1 secret redacted. Report:
-[`replay-mock.md`](incident-investigator/reports/replay-mock.md) · example:
-[`example-INC-1011.md`](incident-investigator/reports/example-INC-1011.md).
+[`replay-mock.md`](use-cases/incident-investigation/reports/replay-mock.md) · example:
+[`example-INC-1011.md`](use-cases/incident-investigation/reports/example-INC-1011.md).
 
 ### 5.2 Use case 2 — Knowledge & runbooks
 
@@ -434,21 +447,21 @@ flowchart LR
 **Result (mock provider):** **9 of 9** expected findings, 0 unexpected. The repeat cluster was
 found: database pool exhaustion, 3 incidents across 2 services. All 4 overdue actions were found,
 including the 2 on the recurring cause. 3 edits were drafted, 0 rejected and 0 published.
-Reports: [`knowledge-evaluation-mock.md`](incident-investigator/reports/knowledge-evaluation-mock.md) ·
+Reports: [`knowledge-evaluation-mock.md`](use-cases/knowledge-runbooks/reports/knowledge-evaluation-mock.md) ·
 review queues for
-[Membership & Identity](incident-investigator/reports/knowledge-review-membership-identity.md) and
-[Loyalty](incident-investigator/reports/knowledge-review-loyalty.md).
+[Membership & Identity](use-cases/knowledge-runbooks/reports/knowledge-review-membership-identity.md) and
+[Loyalty](use-cases/knowledge-runbooks/reports/knowledge-review-loyalty.md).
 
 > **Read these results with care.** The synthetic data was written alongside the rules, so these
 > results show the pipelines work end to end. They do **not** predict accuracy on real data. The
 > numbers that matter come from real incidents and real runbooks during the pilot, run with the
 > Claude provider against the placeholder gates in
-> [`config/pilot_gates.json`](incident-investigator/config/pilot_gates.json).
+> the `gates` sections of [`config/product.toml`](config/product.toml).
 
 ### 5.3 Use case 3 — Architecture & ADLC
 
 **Why third.** It moves the platform from operations into the start of the lifecycle, still at zero
-risk: it reads a requirement and drafts a proposal, and people approve every decision. It reuses the
+risk: it reads a requirement, either a structured intake form or a requirement document, and drafts a proposal, and people approve every decision. It reuses the
 same evidence, provider, validation, audit and evaluation pattern, and adds three sources most
 organisations already have: a requirements intake form, a reference pattern library and the ADR
 repository. Use cases 1 and 2 deal with failures after release; this one brings residency, recovery
@@ -456,11 +469,13 @@ and other NFRs into the design before any code is written.
 
 ```mermaid
 flowchart LR
+    R[Requirement document<br/>.md / .txt] --> X[Extraction<br/>model quotes the document<br/>code checks quotes + figures]
+    X --> A
     A[Read-only sources<br/>structured requirement · NFRs<br/>pattern library · existing ADRs] --> B[Assessment in code<br/>every option vs every NFR<br/>meets · at risk · fails · unknown]
     B --> C[Ranking + checks in code<br/>must-NFR failure rejects<br/>ADR conflicts · open questions]
     C --> D[Model call<br/>drafts ADR wording + user stories only]
     D --> E[Validation in code<br/>no rejected option · all alternatives<br/>no invented figures · targets quoted]
-    E --> F[NFR traceability<br/>component · mechanism · ADRs · stories]
+    E --> F[NFR traceability + container diagram<br/>component · mechanism · ADRs · stories<br/>Mermaid, drawn in code]
     F --> G[Proposal pack<br/>review board approves ADR<br/>product owner approves stories]
     G --> H[Evaluation vs labels<br/>pilot gates]
     B -.-> L[(Append-only<br/>audit log)]
@@ -471,6 +486,13 @@ flowchart LR
 1. **Read.** A structured requirement: capabilities, regions, NFRs with priority and target, open
    business decisions and stakeholder notes. The reference patterns with their published estimates,
    and the existing ADRs with their status.
+   - **Or start from a requirement document** (Markdown or plain text). Secrets are redacted and
+     instruction-like text is flagged before the model sees it. The model extracts capabilities, NFRs,
+     open decisions and notes, quoting the document for each one. Code rejects any item whose quote is
+     not in the document word for word, and parses every target from the quoted text, so a figure that
+     isn't in the document can never become a target. "TBD" or "not agreed" stays empty, so it becomes
+     an open question. The result is marked as needing the requester's confirmation. Word or PDF
+     documents are exported to Markdown first.
 2. **Assess (code).** Each pattern is scored against each NFR with a fixed rule per NFR category.
    For example, availability within 0.05 points of target is at risk, and throughput is computed per
    cell × number of regions. An NFR with no agreed target is **unknown** and is never guessed.
@@ -485,8 +507,15 @@ flowchart LR
    unknown capability or NFR, if its acceptance criteria don't state the NFR's numeric target, or if it
    cites no real evidence other than flagged notes. If the ADR chooses a viable option other than the
    preferred one, it is kept and the disagreement is flagged for the review board.
-6. **Trace and review.** Each NFR is traced to a component, a mechanism, ADRs and stories, or shown
-   as a gap with the reason. The proposal pack goes to the architecture review board (ADR) and the
+6. **Trace, draw and review.** Each NFR is traced to a component, a mechanism, ADRs and stories, or
+   shown as a gap with the reason. Code draws a **container diagram** (Mermaid) of the preferred option
+   from the pattern library: the client, the global edge, and one regional cell naming the regions.
+   Each component lists the NFRs traced to it, so the picture and the traceability matrix always agree.
+   A connection to a component the pattern doesn't define is reported as an issue, not drawn.
+   Every run writes the proposal pack three ways: Markdown, a `.mmd` diagram file, and an **HTML page**
+   that puts the requirement document and the rendered diagram side by side, followed by the option
+   comparison, the ADR draft, traceability, stories and open questions (screenshot in
+   [section 4](#architecture--adlc--from-a-requirement-document-working-code)). The proposal pack goes to the architecture review board (ADR) and the
    product owner (stories). Nothing is written to the ADR repository or the backlog.
 
 **Result (mock provider):** **44 of 44** assessment cells as expected, across 4 patterns × 11 NFRs.
@@ -494,57 +523,101 @@ PAT-A (regional cells + event-sourced ledger) is preferred and PAT-D is viable b
 ADR-005. PAT-B is rejected on residency (viable only for a single-region launch) and PAT-C on RPO,
 residency and idempotency. ADR-007 was drafted with 6 stories covering all 6 capabilities, and
 **9 of 11** NFRs are traced. The 2 gaps (cost ceiling, DR test cadence) have no agreed target and
-become open questions, as in the prototype screen. 0 drafts rejected, 0 invented figures. 1 workshop
-note was flagged as instructions and its API key redacted. Reports:
-[`architecture-evaluation-mock.md`](incident-investigator/reports/architecture-evaluation-mock.md) ·
-proposal pack [`architecture-proposal-REQ-LOY-001.md`](incident-investigator/reports/architecture-proposal-REQ-LOY-001.md).
+become open questions, as in the prototype screen. 0 drafts rejected, 0 invented figures. The
+container diagram shows all 8 components of the prototype's container view, and all 9 traced NFRs.
+Starting from the [requirement document](use-cases/architecture-adlc/data/synthetic/requirement-document.md)
+gives the same requirement with 0 items rejected, so the same results. 1 workshop note was flagged as
+instructions and its API key redacted before the model saw it. Reports:
+[`architecture-evaluation-mock.md`](use-cases/architecture-adlc/reports/architecture-evaluation-mock.md) ·
+proposal pack [`architecture-proposal-REQ-LOY-001.md`](use-cases/architecture-adlc/reports/architecture-proposal-REQ-LOY-001.md) ·
+diagram [`architecture-container-REQ-LOY-001.mmd`](use-cases/architecture-adlc/reports/architecture-container-REQ-LOY-001.mmd) ·
+page [`architecture-proposal-REQ-LOY-001.html`](use-cases/architecture-adlc/reports/architecture-proposal-REQ-LOY-001.html)
+(download and open in a browser).
 
-### 5.4 What is built, and what is not yet
+![Use case 3: from requirement document to architecture](docs/stakeholder/screenshots/18-architecture-from-document.png)
+
+### 5.4 Code structure and configuration
+
+The code is one platform core plus one folder per use case. Details, and how to add a use case:
+[`core/README.md`](core/README.md).
+
+```text
+config/product.toml          one file configures the whole product
+ecc.py                       run `ecc` from a checkout, nothing installed
+core/                        ecc-core: configuration, plugin contract, ecc CLI, Claude client,
+                             evidence, secret redaction + injection flagging, audit log, shared sources
+use-cases/
+  incident-investigation/    ecc-incident      src/ · data/ · tests/ · reports/ · README.md · pyproject.toml
+  knowledge-runbooks/        ecc-knowledge     (same layout)
+  architecture-adlc/         ecc-architecture  (same layout)
+shared-data/                 data read by more than one use case (runbooks)
+scripts/                     synthetic data generator, README screenshot
+```
+
+- **Modular.** Core has no use-case logic. Each use case depends on core only, never on another use
+  case (a test enforces this), and owns its prompts, schemas, thresholds, data, tests and reports.
+  Each is a separate installable package, so a deployment installs only the use cases it runs.
+- **Plugins.** A use case declares a `USE_CASE` contract: its command name, the data paths it
+  needs, and its settings and gates with defaults. `ecc` loads the modules named in the
+  configuration and adds their commands, as in `ecc incident replay` or `ecc architecture run`.
+- **Configuration.** [`config/product.toml`](config/product.toml) sets which use cases are enabled,
+  the model (provider, Claude model, effort, tokens, fallbacks), shared sources, and per use case its
+  data paths, thresholds (for example the stale-runbook age or the NFR assessment margins) and pilot
+  gates. Precedence: command-line flag > `ECC_*` environment variable > the file > the default in
+  code. Validation is strict: an unknown key, a wrong type, a missing path or a module that is not
+  installed is reported by `ecc config validate`, never silently replaced by a default. Approval
+  and risk rules stay in code, because they are governance.
+
+### 5.5 What is built, and what is not yet
 
 | Area | Built | Not yet |
 |------|-------|---------|
 | Data sources | Read-only interfaces + fixture adapters for every source | Adapters for real tools: deploy pipeline, Prometheus, log search, Jira/ServiceNow, runbook wiki, team directory |
 | Use case 1 | Evidence builder, 8 detectors, validation, replay, shadow mode, feedback and report | Traces, multi-service correlation, post-incident report drafting, webhook into the shadow inbox |
 | Use case 2 | 7 checks, repeat clusters, overdue actions, recommendations, drafted edits with validation, per-team review queue, feedback, evaluation | Publishing approved edits back to the wiki (deliberately not built), reading the wiki's revision history |
-| Use case 3 | Option-by-NFR assessment, ranking, ADR conflicts, open questions, drafted ADR and stories with validation, NFR traceability, proposal pack, approver feedback, evaluation | Container diagrams, cost estimates (left to Licensing & TCO), writing approved ADRs and stories to the repository or Jira (deliberately not built) |
-| Model | Mock (default) and Claude Opus 5.5 provider shared by all three use cases; request shape tested offline | A paid replay run with Claude. Commands are ready: `replay --provider claude`, `knowledge evaluate --provider claude`, `architecture evaluate --provider claude` |
+| Use case 3 | Requirement document intake with quote and figure checks, option-by-NFR assessment, ranking, ADR conflicts, open questions, drafted ADR and stories with validation, NFR traceability, Mermaid container diagram, proposal pack as Markdown and an HTML page, approver feedback, evaluation | Reading Word or PDF directly (export to Markdown first), diagrams for options other than the preferred one, cost estimates (left to Licensing & TCO), writing approved ADRs and stories to the repository or Jira (deliberately not built) |
+| Platform | Core package, plugin contract, one `ecc` CLI, product configuration with strict validation and environment overrides, a package per use case | Per-environment configuration files, secrets from a vault, a service deployment |
+| Model | Mock (default) and one Claude Opus 5.5 client in core, used by all three use cases; request shape tested offline | A paid run with Claude. Commands are ready: `ecc incident replay --provider claude`, `ecc knowledge evaluate --provider claude`, `ecc architecture evaluate --provider claude` |
 | Governance | Policy-set risk and approval, append-only audit, secret redaction, injection flagging | Approval workflow and UI from the prototype; tamper-evident audit storage |
-| Quality | 51 tests, compile check, static import check, wheel build + install verified in a clean virtualenv | CI pipeline |
+| Quality | 93 tests (24 core, 20 + 13 + 35 per use case), compile check, a test that use cases never import each other, every package built and installed in a clean virtualenv | CI pipeline |
 
-### 5.5 Build, test and run
+### 5.6 Build, test and run
+
+Python 3.11 or newer; nothing to install for the mock provider. Run from the repository root.
 
 ```bash
-cd incident-investigator
-python -m pytest                                   # 51 tests, no network
-
-# bash / Git Bash  (PowerShell: $env:PYTHONPATH="src")
-export PYTHONPATH=src
+python -m pytest                                   # 93 tests across core and the three use cases, no network
+python ecc.py use-cases                            # what is enabled
+python ecc.py config validate                      # check config/product.toml and every data path
 
 # Use case 1: incident investigation
-python -m investigator replay                      # past incidents vs known causes
-python -m investigator investigate data/synthetic/live/INC-1042.json
-python -m investigator shadow run                  # new incidents -> review queue
-python -m investigator shadow feedback INC-1042 --useful yes --confirmed-cause config_change --minutes 31 --by sam.sre
-python -m investigator shadow report
+python ecc.py incident replay                      # past incidents vs known causes
+python ecc.py incident investigate use-cases/incident-investigation/data/synthetic/live/INC-1042.json
+python ecc.py incident shadow run                  # new incidents -> review queue
+python ecc.py incident shadow feedback INC-1042 --useful yes --confirmed-cause config_change --minutes 31 --by sam.sre
+python ecc.py incident shadow report
 
 # Use case 2: knowledge & runbooks
-python -m investigator knowledge evaluate          # run checks + drafts, score against labels
-python -m investigator knowledge feedback EDIT-RB-017-3-replace --accept yes --by ria.owner
-python -m investigator knowledge report
+python ecc.py knowledge evaluate                   # run checks + drafts, score against labels
+python ecc.py knowledge feedback EDIT-RB-017-3-replace --accept yes --by ria.owner
+python ecc.py knowledge report
 
 # Use case 3: architecture & ADLC
-python -m investigator architecture evaluate       # assess options, draft ADR + stories, score against labels
-python -m investigator architecture feedback ADR-007 --accept yes --by arb.chair
-python -m investigator architecture report
+python ecc.py architecture evaluate                # assess options, draft ADR + stories, score against labels
+python ecc.py architecture run --requirement-doc use-cases/architecture-adlc/data/synthetic/requirement-document.md
+#   -> runs/architecture/proposal/REQ-LOY-001.html: open in a browser
+python scripts/screenshot_architecture.py          # regenerate the README screenshot (needs Edge or Chrome)
+python ecc.py architecture feedback ADR-007 --accept yes --by arb.chair
+python ecc.py architecture report
 
-# Build an installable wheel
-pip wheel . --no-deps -w dist
+# Install as packages (optional): then `ecc ...` replaces `python ecc.py ...`
+pip install -e core -e use-cases/incident-investigation -e use-cases/knowledge-runbooks -e use-cases/architecture-adlc
 
 # With Claude (costs money; needs ANTHROPIC_API_KEY or an `ant auth login` profile)
-pip install -e ".[claude]"
-python -m investigator replay --provider claude
-python -m investigator knowledge evaluate --provider claude
-python -m investigator architecture evaluate --provider claude
+pip install -e "core[claude]"
+python ecc.py incident replay --provider claude    # or set provider = "claude" in config/product.toml, or ECC_PROVIDER=claude
+python ecc.py knowledge evaluate --provider claude
+python ecc.py architecture evaluate --provider claude
 ```
 
 ---
@@ -561,14 +634,16 @@ python -m investigator architecture evaluate --provider claude
 | Citations | Every evidence ID checked in code; invalid claims removed and **counted** | Trust the model's citations | "Unsupported claims" and "rejected edits" become measured metrics |
 | Default provider | Deterministic mock; Claude is opt-in | Claude by default | Free, reproducible tests and demos. Real model quality is measured deliberately |
 | Model | Claude Opus 5.5 at effort `high`, structured JSON output, server-side refusal fallback | A cheaper model such as Claude Sonnet 5.5 | Low volume, high stakes. Replay and evaluation make it cheap to compare a cheaper model later on the same data |
-| One provider class | `complete_json` shared by all three use cases | A client per use case | One place for model settings, error handling and refusal handling |
+| One model client | `ClaudeClient.complete_json` in core, used by all three use cases; each use case passes its own prompt and schema | A client per use case | One place for model settings, error handling and refusal handling |
 | Untrusted text | Redact secrets, flag injection, wrap evidence as data, give the model no tools | Rely on the system prompt alone | Defence in depth: even a successful injection has nothing to act on |
 | Approval | Set by policy tables in code | Let the model rate risk | The model cannot lower risk or skip approval; unknown action types default to the highest risk |
 | Labels | Separate files that the pipelines never read | Labels next to the input data | Prevents the answer leaking into the result; a test enforces it for use case 1 |
-| Dependencies | Standard library only; `anthropic` optional | Frameworks (LangChain, pandas, a database) | Runs anywhere; fewer supply-chain and approval hurdles for a pilot |
+| Dependencies | Standard library only (Python 3.11+, for `tomllib`); `anthropic` optional | Frameworks (LangChain, pandas, a database) | Runs anywhere; fewer supply-chain and approval hurdles for a pilot |
 | Data access | JSON fixtures behind read-only interfaces | Connect real tools straight away | Proves the pipeline first; real adapters slot in behind the same interface |
 | Audit | Append-only JSON Lines with correlation IDs | Database or WORM storage | Simple and inspectable for a pilot; production moves it to tamper-evident storage |
-| Packaging | One package, three use cases, one CLI | A separate service per use case | Shared code stays shared; split into services once there is real load |
+| Packaging | A core package plus one package per use case, loaded as plugins named in the configuration; one CLI | One package for everything; a separate service per use case | Each use case can be owned, tested, versioned and deployed on its own, while shared code stays in one place. Services can come once there is real load |
+| Configuration | One TOML file for the product, strictly validated; each use case declares its settings and defaults | Settings spread across code constants, JSON files and flags | One place to see and change how the product behaves; a typo is an error, not a silent default |
+| What is configurable | Data paths, model, thresholds, pilot gates, which use cases are on | Also approval and risk rules | Approval rules are governance: they change through code review, not a config edit |
 
 ### 6.2 Use case 1 — Incident investigation
 
@@ -608,6 +683,15 @@ python -m investigator architecture evaluate --provider claude
 | Approvals | ADR by the architecture review board, each story by the product owner | One approval for the whole pack | Matches who owns each decision today |
 | Output | Proposal pack in Markdown; no write to the ADR repository or Jira | Open a pull request on the ADR repository | Zero risk during the pilot; a pull request is the natural next step once drafts are trusted |
 | Cost | Relative cost from the pattern library only | Estimate cloud cost here | Cost estimates belong to Licensing & TCO with open formulas; until a ceiling is agreed, cost is an open question |
+| Requirement documents | Model extracts with a word-for-word quote per item; code checks every quote and parses every target from it | Trust the model's extraction, or require the structured form only | Teams write documents, not JSON; the quote check makes each extracted item traceable to a line of the document, and targets cannot be invented |
+| Missing targets in a document | Kept empty and marked "not agreed" | Let the model infer a typical value | The same rule as for structured input: guesses become open questions instead |
+| Extracted requirement | Marked "needs requester confirmation" in the proposal pack | Treat it as confirmed | The requester owns the requirement; a misread NFR would skew the whole assessment |
+| Who draws the diagram | Code, from the pattern library's components and connections | Ask the model to draw it | A drawn component that doesn't exist is worse than no diagram; code can only draw what the architecture team defined |
+| Diagram format | Mermaid text in the proposal pack and a `.mmd` file | PNG/SVG image, or C4-PlantUML | Renders in GitHub, GitLab, Azure DevOps, VS Code and Confluence; diffs in review; no image toolchain in the package |
+| What the diagram shows | Each component labelled with the NFRs traced to it; one cell drawn for all regions | One diagram per region | Ties the picture to the traceability matrix, and stays readable as regions are added |
+| Proposal page | Static HTML written by every run from `results.json`, in the prototype's visual style | A web app with a server | Opens anywhere with no install, and shows exactly what the run produced; the approval UI comes later with the shared approval workflow |
+| Mermaid renderer | Loaded from a pinned CDN version; without network the diagram source is shown | Bundle the renderer into the page | Keeps each page small; the source stays readable offline |
+| README screenshot | Taken from a real run by a script, with headless Edge or Chrome | Hand-made image or a prototype mockup | The picture can't drift from what the code does; anyone can regenerate it |
 
 ### 6.5 Decisions made while building
 
@@ -618,7 +702,12 @@ python -m investigator architecture evaluate --provider claude
 | Data files needed an author and generator note, but JSON has no comments | A `_meta` block in each data file; readers ignore it | Every file is attributed without breaking the schema |
 | `setuptools>=68` failed on the local Python (65.5) | Build requirement lowered to `setuptools>=61`, the first version with `pyproject.toml` support | The wheel builds on older toolchains too |
 | No linter installed locally | Compile check and a standard-library static import check, rather than installing tools into the user's environment | Keeps the build dependency-free; add `ruff` in CI later |
-| An installed wheel doesn't include the sample data | Paths are CLI options; defaults point at the repository's `data/` | Running from the repository works out of the box; production passes real paths |
+| An installed wheel doesn't include the sample data | Data paths come from `config/product.toml`, resolved against the repository root | Running from the repository works out of the box; production points the configuration at real sources |
+| The first diagram layout (left to right) was too wide to read once scaled into the page | Top-to-bottom layout, a shorter cell title so arrows don't cross it | Found by looking at the rendered screenshot, not the Mermaid text |
+| All three use cases lived in one package named after the first (`incident-investigator`) | Split into `core/` and one folder and package per use case, with the product configuration in one file | Each use case can now be maintained, tested and installed on its own |
+| Use case 2 imported the runbook loader from use case 1, and the Claude provider had one method per use case | The loader moved to core; core keeps one generic `complete_json`, and each use case owns its prompt, schema and small adapter | Removes every dependency between use cases; a new use case needs no change in core |
+| Thresholds were module constants and gates were a separate JSON file | Both moved to `config/product.toml`, passed into the code as small typed values (`Limits`, `Thresholds`, `Rules`) | Configurable without global state; defaults stay documented in code and tested to match the file |
+| `tomllib` needs Python 3.11 | Minimum raised from 3.10 to 3.11 | A configuration file people can comment is worth it; 3.10 reaches end of life in 2026 |
 | Mock results looked perfect (8/8, 9/9, 44/44) | Stated plainly in the README and in every generated report | The synthetic data was written alongside the rules; perfect scores prove the plumbing, not accuracy |
 
 ---
