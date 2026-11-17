@@ -1,0 +1,44 @@
+{
+  "_meta": {
+    "author": "Pradeep Sahoo",
+    "generated_by": "scripts/generate_synthetic_data.py",
+    "synthetic": true
+  },
+  "change": "CHG0030488",
+  "pull_requests": [
+    {
+      "id": "PR #288",
+      "title": "Add tier_code",
+      "files": [
+        {
+          "path": "migration/file_1.sql",
+          "kind": "migration"
+        },
+        {
+          "path": "code/file_1.java",
+          "kind": "code"
+        },
+        {
+          "path": "code/file_2.java",
+          "kind": "code"
+        }
+      ],
+      "lines_changed": 60
+    }
+  ],
+  "migrations": [
+    {
+      "id": "migration 0137",
+      "table": "points_txn",
+      "operation": "add_column",
+      "column": "tier_code",
+      "nullable": false,
+      "rows_estimate": 48000000,
+      "online": false
+    }
+  ],
+  "coverage": {
+    "changed_lines_pct": 50,
+    "run": "CI run 9620"
+  }
+}

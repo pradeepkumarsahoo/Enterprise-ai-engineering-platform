@@ -6,6 +6,24 @@
   },
   "result": [
     {
+      "number": "INC0011007",
+      "sys_id": "sn0011007",
+      "short_description": "Accrual writes blocked",
+      "description": "Alert: accrual write latency > 2 s for 5 min.",
+      "priority": "3",
+      "state": "Closed",
+      "active": "false",
+      "category": "Software",
+      "opened_at": "2026-09-12 10:40:00",
+      "resolved_at": "2026-09-12 10:52:00",
+      "closed_at": "2026-09-12 10:52:00",
+      "cmdb_ci": "loyalty-ledger",
+      "assignment_group": "Loyalty",
+      "close_code": "Solved (Work Around)",
+      "close_notes": "Migration CHG0030488 locked points_txn for 6 minutes. Lock released when the migration finished.",
+      "problem_id": ""
+    },
+    {
       "number": "INC0010987",
       "sys_id": "sn0010987",
       "short_description": "Membership API timeouts",

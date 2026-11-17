@@ -17,12 +17,14 @@ a governed AI layer for the software lifecycle and production operations.
 > Independently developed reference concept. All data shown is synthetic, and the prototype uses a
 > deterministic mock AI provider. Nothing here is a production outcome.
 
-**Code:** the first three use cases are implemented, one folder each under [`use-cases/`](use-cases/), on a
+**Code:** the first four use cases are implemented, one folder each under [`use-cases/`](use-cases/), on a
 shared [`core/`](core/), configured by [`config/product.toml`](config/product.toml).
 1. **Incident investigation:** on past incidents first, then alongside on-call engineers.
 2. **Knowledge & runbooks:** stale runbooks, repeat incidents and drafted fixes.
 3. **Architecture & ADLC:** from a requirement document to options scored against NFRs, a drafted ADR
    and stories, NFR traceability and a container diagram.
+4. **Change risk:** a pre-deploy risk score from rules, similar past changes, release conditions and a
+   two-person release gate.
 
 See [section 5](#5-implementation) for what is built and
 [section 6](#6-decisions-and-trade-offs-made-during-development) for the decisions behind it.
@@ -257,7 +259,7 @@ real code (use case 3, [section 5.3](#53-use-case-3--architecture--adlc)) from t
 On the left, the requirement extracted from the document, each NFR's target and whether it is traced,
 and the document flags (an API key redacted, an embedded instruction ignored). On the right, the
 container diagram of the preferred option, drawn in code from the pattern library, with each component
-labelled with the NFRs it satisfies. Regenerate with `python scripts/screenshot_architecture.py`.
+labelled with the NFRs it satisfies. Regenerate with `python scripts/screenshots.py architecture`.
 
 ![Architecture from a requirement document](docs/stakeholder/screenshots/18-architecture-from-document.png)
 
@@ -285,6 +287,16 @@ weight and links to a record. The score comes from versioned rules, not the mode
 suggests release conditions, and a score of 7 or more needs a second approver.
 
 ![Change risk](docs/stakeholder/screenshots/09-change-risk.png)
+
+### Change risk — pre-deploy assessment (working code)
+Like the requirement-document screenshot below, this is not the prototype. It is the risk report
+produced by the real code (use case 4, [section 5.4](#54-use-case-4--change-risk)) for the
+`loyalty-ledger` v3.8 release in the dummy ServiceNow instance. The score of 9.3 is the sum of eight
+rule-based factors, each linked to a record, and three similar past changes were each followed by an
+incident. The release conditions were drafted and then validated against the evidence, and the gate
+waits for two approvers. Regenerate with `python scripts/screenshots.py change`.
+
+![Change risk assessment](docs/stakeholder/screenshots/19-change-risk-assessment.png)
 
 ### Knowledge & runbooks
 Runbook health checked against what responders did in real incidents. RB-017 still names a
@@ -346,7 +358,7 @@ an onboarding pack and a practice incident.
 ## 5. Implementation
 
 Code: [`core/`](core/) + one package per use case in [`use-cases/`](use-cases/) · Python 3.11+ ·
-standard library only · 111 automated tests · each package builds as an installable wheel. Three use
+standard library only · 128 automated tests · each package builds as an installable wheel. Four use
 cases are implemented, in priority order:
 
 | # | Use case | Status | What it proves |
@@ -354,8 +366,9 @@ cases are implemented, in priority order:
 | 1 | Incident investigation, on past incidents then in shadow mode | Implemented | Evidence-backed diagnosis is accurate and useful, with zero risk |
 | 2 | Knowledge & runbooks | Implemented | The same platform stops incidents repeating: stale runbooks fixed, follow-ups chased |
 | 3 | Architecture & ADLC | Implemented | A requirement document becomes a reviewed design: options scored against NFRs in code, an ADR, stories and a diagram, with no invented figures |
+| 4 | Change risk | Implemented | Risky changes are caught before release, with every point of the score traceable and a two-person gate the agent cannot bypass |
 
-All three share the same building blocks: read-only sources, evidence numbered in code, a deterministic
+All four share the same building blocks: read-only sources, evidence numbered in code, a deterministic
 first pass, one structured model call with no tools, validation in code, policy-set approvals, an
 append-only audit log and an evaluation against held-out labels.
 
@@ -596,7 +609,76 @@ page [`architecture-proposal-REQ-LOY-001.html`](use-cases/architecture-adlc/repo
 
 ![Use case 3: from requirement document to architecture](docs/stakeholder/screenshots/18-architecture-from-document.png)
 
-### 5.4 Code structure and configuration
+### 5.4 Use case 4 — Change risk
+
+**Why fourth.** Use cases 1–3 find causes after the fact; this one stops the risky change before it
+ships. It reuses nearly everything already built:
+- ServiceNow change and incident history, through the read-only connector;
+- the runbooks and the service catalogue;
+- the evidence, validation and audit pattern;
+- the replay idea, as a backtest on past changes.
+
+It is the prototype's Change risk screen, now working code.
+
+```mermaid
+flowchart LR
+    A[Read-only sources<br/>ServiceNow change + incidents<br/>PR diff · migrations · contracts<br/>CI coverage · release calendar<br/>catalogue · runbooks] --> B[Factors in code<br/>each with evidence C1, C2, ...]
+    B --> C[Score = sum of weights, cap 10<br/>low · medium · high]
+    B --> D[Similar past changes<br/>followed by an incident,<br/>as known at assessment time]
+    C --> E[Model: summary +<br/>release conditions only]
+    D --> E
+    E --> F[Validation in code<br/>condition answers a fired factor<br/>cites evidence · no invented figures]
+    F --> G[Risk report + release gate<br/>high = 2 approvers<br/>requester and agents cannot approve]
+    G --> H[(Audit log)]
+```
+
+1. **Read.** The ServiceNow change request, and what the change contains: pull requests, config
+   diffs, migrations, new queries, contract changes and coverage of changed lines. Also the service
+   catalogue (SLOs, contract consumers), the release calendar (low-traffic windows, freezes, canary
+   policy), runbooks, and incident history with alert-time fields only.
+2. **Score (code).** Eleven rules, each citing evidence, with weights from the configuration.
+   - **Settings:** a capacity or timeout setting changed, and whether it was cut sharply.
+   - **History:** repeats a past incident pattern; recent incidents on the service.
+   - **Data and contracts:** a migration that can lock a large table; a new unindexed query; a
+     contract change, weighted by its number of consumers.
+   - **Process:** a coverage gap; outside the low-traffic window or inside a freeze; no or a stale
+     rollback runbook; the size of the change.
+
+   The score is the sum, capped at 10. Low is below 3, medium from 3, high from 7.
+3. **Find similar past changes (code).** A past change that shares a capacity setting, table or
+   contract with this one, and was followed by an incident on its service within 48 hours. Only
+   incidents already opened at assessment time count, so a backtest cannot see the future.
+4. **Draft (model).** A summary and release conditions, for example "Canary 5% for 30 min; halt
+   and roll back if p95 exceeds 400 ms". The model never sets or changes the score.
+5. **Validate (code).** A condition is rejected if it answers a factor that did not fire, cites no
+   real evidence, states a figure not in the evidence, or duplicates another.
+6. **Gate (code, governance).**
+   - High needs two different approvers; low or medium needs one.
+   - The requester cannot approve, an agent never can, and approvers need a release role.
+   - A rejection blocks the release.
+   - Approvals are tied to the assessment: editing the change re-scores it and resets them.
+
+**Result (dummy instance, mock provider):**
+- **The v3.8 release** (CHG0030601) scores **9.3, high**: 8 factors, 3 similar past changes that
+  were followed by INC0010987, INC0011007 and INC0011011, and 9 conditions, all valid.
+  "Whether partner-gateway still reads `pts`" is reported as not established, because it has no
+  contract tests.
+- **The other two upcoming changes** score 4.3 (medium) and 0 (low).
+- **The gate refused** the requester, an agent, a disallowed role and a duplicate approver, and
+  released the high-risk change only after a second approver.
+- **The backtest on 7 past changes:** 3 of the 4 changes that were followed by an incident were
+  flagged, and 1 of the 4 flagged changes was a false alarm. The miss (CHG0030530) was a memory
+  leak, which no change metadata reveals. The false alarm (CHG0030415) was the fix for an
+  incident, which touched the same setting. The recall gate (80%) reports **FAIL**, and that is
+  the point of a backtest: the next gain needs load-test results or runtime data.
+
+Reports: [`change-risk-CHG0030601.md`](use-cases/change-risk/reports/change-risk-CHG0030601.md) · page
+[`change-risk-CHG0030601.html`](use-cases/change-risk/reports/change-risk-CHG0030601.html) ·
+[`backtest-mock.md`](use-cases/change-risk/reports/backtest-mock.md).
+
+![Use case 4: change risk assessment](docs/stakeholder/screenshots/19-change-risk-assessment.png)
+
+### 5.5 Code structure and configuration
 
 The code is one platform core plus one folder per use case. Details, and how to add a use case:
 [`core/README.md`](core/README.md).
@@ -610,8 +692,9 @@ use-cases/
   incident-investigation/    ecc-incident      src/ · data/ · tests/ · reports/ · README.md · pyproject.toml
   knowledge-runbooks/        ecc-knowledge     (same layout)
   architecture-adlc/         ecc-architecture  (same layout)
-shared-data/                 data read by more than one use case (runbooks)
-scripts/                     synthetic data generator, README screenshot
+  change-risk/               ecc-change        (same layout)
+shared-data/                 data read by more than one use case (runbooks, service catalogue, ServiceNow fixtures)
+scripts/                     synthetic data generator, README screenshots
 ```
 
 - **Modular.** Core has no use-case logic. Each use case depends on core only, never on another use
@@ -628,7 +711,7 @@ scripts/                     synthetic data generator, README screenshot
   installed is reported by `ecc config validate`, never silently replaced by a default. Approval
   and risk rules stay in code, because they are governance.
 
-### 5.5 What is built, and what is not yet
+### 5.6 What is built, and what is not yet
 
 | Area | Built | Not yet |
 |------|-------|---------|
@@ -636,17 +719,18 @@ scripts/                     synthetic data generator, README screenshot
 | Use case 1 | Evidence builder, 8 detectors, validation, replay, shadow mode, feedback and report | Traces, multi-service correlation, post-incident report drafting, webhook into the shadow inbox |
 | Use case 2 | 7 checks, repeat clusters, overdue actions, recommendations, drafted edits with validation, per-team review queue, feedback, evaluation | Publishing approved edits back to the wiki (deliberately not built), reading the wiki's revision history |
 | Use case 3 | Requirement document intake with quote and figure checks, option-by-NFR assessment, ranking, ADR conflicts, open questions, drafted ADR and stories with validation, NFR traceability, Mermaid container diagram, proposal pack as Markdown and an HTML page, approver feedback, evaluation | Reading Word or PDF directly (export to Markdown first), diagrams for options other than the preferred one, cost estimates (left to Licensing & TCO), writing approved ADRs and stories to the repository or Jira (deliberately not built) |
+| Use case 4 | 11 risk factors with evidence, configurable weights and bands, similar past changes without look-ahead, drafted conditions with validation, two-person release gate tied to the assessment, Markdown and HTML report, backtest | Real Git host and CI adapters, load-test and runtime signals (the backtest's miss), a pipeline check that reads the gate |
 | Platform | Core package, plugin contract, one `ecc` CLI, product configuration with strict validation and environment overrides, a package per use case | Per-environment configuration files, secrets from a vault, a service deployment |
-| Model | Mock (default) and one Claude Opus 5.5 client in core, used by all three use cases; request shape tested offline | A paid run with Claude. Commands are ready: `ecc incident replay --provider claude`, `ecc knowledge evaluate --provider claude`, `ecc architecture evaluate --provider claude` |
+| Model | Mock (default) and one Claude Opus 5.5 client in core, used by every use case; request shape tested offline | A paid run with Claude. Commands are ready: `ecc incident replay --provider claude`, `ecc knowledge evaluate --provider claude`, `ecc architecture evaluate --provider claude`, `ecc change assess --provider claude` |
 | Governance | Policy-set risk and approval, append-only audit, secret redaction, injection flagging | Approval workflow and UI from the prototype; tamper-evident audit storage |
-| Quality | 111 tests (36 core, 27 + 13 + 35 per use case), compile check, a test that use cases never import each other, every package built and installed in a clean virtualenv | CI pipeline |
+| Quality | 128 tests (36 core, 27 + 13 + 35 + 17 per use case), compile check, a test that use cases never import each other, every package built and installed in a clean virtualenv | CI pipeline |
 
-### 5.6 Build, test and run
+### 5.7 Build, test and run
 
 Python 3.11 or newer; nothing to install for the mock provider. Run from the repository root.
 
 ```bash
-python -m pytest                                   # 111 tests across core and the three use cases, no network
+python -m pytest                                   # 128 tests across core and the four use cases, no network
 python ecc.py use-cases                            # what is enabled
 python ecc.py config validate                      # check config/product.toml and every data path
 
@@ -668,25 +752,33 @@ python ecc.py knowledge report
 python ecc.py architecture evaluate                # assess options, draft ADR + stories, score against labels
 python ecc.py architecture run --requirement-doc use-cases/architecture-adlc/data/synthetic/requirement-document.md
 #   -> runs/architecture/proposal/REQ-LOY-001.html: open in a browser
-python scripts/screenshot_architecture.py          # regenerate the README screenshot (needs Edge or Chrome)
+python scripts/screenshots.py                      # regenerate the README screenshots (needs Edge or Chrome)
 python ecc.py architecture feedback ADR-007 --accept yes --by arb.chair
 python ecc.py architecture report
 
+# Use case 4: change risk
+python ecc.py change assess                        # score upcoming changes -> runs/change/reports/*.html
+python ecc.py change approve CHG0030601 --by lee.lead --role release-manager
+python ecc.py change approve CHG0030601 --by priya.sre --role sre-lead     # high risk: second approver
+python ecc.py change status
+python ecc.py change backtest                      # past changes scored as of their start vs what followed
+
 # Install as packages (optional): then `ecc ...` replaces `python ecc.py ...`
-pip install -e core -e use-cases/incident-investigation -e use-cases/knowledge-runbooks -e use-cases/architecture-adlc
+pip install -e core -e use-cases/incident-investigation -e use-cases/knowledge-runbooks -e use-cases/architecture-adlc -e use-cases/change-risk
 
 # With Claude (costs money; needs ANTHROPIC_API_KEY or an `ant auth login` profile)
 pip install -e "core[claude]"
 python ecc.py incident replay --provider claude    # or set provider = "claude" in config/product.toml, or ECC_PROVIDER=claude
 python ecc.py knowledge evaluate --provider claude
 python ecc.py architecture evaluate --provider claude
+python ecc.py change assess --provider claude
 ```
 
 ---
 
 ## 6. Decisions and trade-offs made during development
 
-### 6.1 Shared by all three use cases
+### 6.1 Shared by every use case
 
 | Decision | Chosen | Alternative considered | Why |
 |----------|--------|------------------------|-----|
@@ -696,7 +788,7 @@ python ecc.py architecture evaluate --provider claude
 | Citations | Every evidence ID checked in code; invalid claims removed and **counted** | Trust the model's citations | "Unsupported claims" and "rejected edits" become measured metrics |
 | Default provider | Deterministic mock; Claude is opt-in | Claude by default | Free, reproducible tests and demos. Real model quality is measured deliberately |
 | Model | Claude Opus 5.5 at effort `high`, structured JSON output, server-side refusal fallback | A cheaper model such as Claude Sonnet 5.5 | Low volume, high stakes. Replay and evaluation make it cheap to compare a cheaper model later on the same data |
-| One model client | `ClaudeClient.complete_json` in core, used by all three use cases; each use case passes its own prompt and schema | A client per use case | One place for model settings, error handling and refusal handling |
+| One model client | `ClaudeClient.complete_json` in core, used by every use case; each passes its own prompt and schema | A client per use case | One place for model settings, error handling and refusal handling |
 | Untrusted text | Redact secrets, flag injection, wrap evidence as data, give the model no tools | Rely on the system prompt alone | Defence in depth: even a successful injection has nothing to act on |
 | Approval | Set by policy tables in code | Let the model rate risk | The model cannot lower risk or skip approval; unknown action types default to the highest risk |
 | Labels | Separate files that the pipelines never read | Labels next to the input data | Prevents the answer leaking into the result; a test enforces it for use case 1 |
@@ -759,7 +851,21 @@ python ecc.py architecture evaluate --provider claude
 | Mermaid renderer | Loaded from a pinned CDN version; without network the diagram source is shown | Bundle the renderer into the page | Keeps each page small; the source stays readable offline |
 | README screenshot | Taken from a real run by a script, with headless Edge or Chrome | Hand-made image or a prototype mockup | The picture can't drift from what the code does; anyone can regenerate it |
 
-### 6.5 Decisions made while building
+### 6.5 Use case 4 — Change risk
+
+| Decision | Chosen | Alternative considered | Why |
+|----------|--------|------------------------|-----|
+| Who scores | Rules in code; weights in the configuration; the model only explains and drafts conditions | A model-estimated risk | The score must be explainable, repeatable and arguable factor by factor; it gates a release |
+| Combining factors | Sum of weights, capped at 10, with three bands | A trained model | No labelled history to train on yet; a weighted sum can be read, tuned and backtested |
+| Similar past changes | Shared capacity setting, table or contract, followed by an incident within 48 h, known at assessment time | Text similarity of change titles | Matches the mechanism that caused the incident, and cannot leak the future into a backtest |
+| What counts as "caused" | An incident on the same service within the window, or a change closed unsuccessful | Read incident notes for a causal statement | Works without notes; its weakness (a fix change gets flagged) shows up as a measured false alarm |
+| Who may approve | Two-person rule for high, never the requester or an agent, release roles only, in code | Configurable approval policy | Approval rules are governance; they change through code review, not a config edit |
+| Approvals and edits | Tied to an assessment ID; any edit to the change or the rules resets them | Approvals per change number | An approval must refer to the change as it was reviewed |
+| Release conditions | Must answer a fired factor; the canary condition only for medium and high | Free-form advice | Every condition traces to a risk and to evidence; no generic checklists |
+| Past runbook state | Unknown when the only validation date is later than the change | Use today's validation date | Using a later date would leak the future into the backtest |
+| Gate output | Records the decision and re-renders the report; does not touch the pipeline | Block deploys directly | Zero risk during the pilot; a pipeline check reading the gate state is the next step |
+
+### 6.6 Decisions made while building
 
 | Situation | Decision | Why |
 |-----------|----------|-----|
@@ -775,6 +881,9 @@ python ecc.py architecture evaluate --provider claude
 | Thresholds were module constants and gates were a separate JSON file | Both moved to `config/product.toml`, passed into the code as small typed values (`Limits`, `Thresholds`, `Rules`) | Configurable without global state; defaults stay documented in code and tested to match the file |
 | `tomllib` needs Python 3.11 | Minimum raised from 3.10 to 3.11 | A configuration file people can comment is worth it; 3.10 reaches end of life in 2026 |
 | A secret redacted during the ServiceNow pull was counted again by the investigator (`password=[REDACTED]` matched the pattern) | Redaction made idempotent; the pull records its own redactions in the audit log | Each redaction is counted once, where it happened. Found by a test |
+| Use case 4 needed the invented-figures check and the page styling that lived in use case 3 | Both moved to core (`figures.py`, `page.py`); use case 3 imports them from there | Use cases never import each other; shared code belongs in core |
+| A test drafted "Canary 10%" and it passed the figures check, because "10" appears in the evidence as "10:00" | Kept; documented that the check is per number, not per meaning | It catches invented numbers, not misused ones. Meaning-level checks would need the model or a grammar; a known limit |
+| The change-risk backtest reports FAIL (3 of 4) | Left as is, with the miss explained in the report | Tuning the synthetic data or the gate until it passes would make the backtest meaningless |
 | Mock results looked perfect (8/8, 9/9, 44/44) | Stated plainly in the README and in every generated report | The synthetic data was written alongside the rules; perfect scores prove the plumbing, not accuracy |
 
 ---

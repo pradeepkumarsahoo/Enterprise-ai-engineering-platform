@@ -1,0 +1,29 @@
+{
+  "_meta": {
+    "author": "Pradeep Sahoo",
+    "generated_by": "scripts/generate_synthetic_data.py",
+    "synthetic": true
+  },
+  "change": "CHG0030415",
+  "pull_requests": [
+    {
+      "id": "PR #204",
+      "title": "Restore pool size",
+      "files": [
+        {
+          "path": "config/file_1.yaml",
+          "kind": "config"
+        }
+      ],
+      "lines_changed": 2
+    }
+  ],
+  "config_diff": [
+    {
+      "key": "hikari.maximum-pool-size",
+      "from": "10",
+      "to": "50",
+      "file": "application-prod.yaml"
+    }
+  ]
+}

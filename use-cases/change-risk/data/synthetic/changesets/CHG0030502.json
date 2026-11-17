@@ -1,0 +1,65 @@
+{
+  "_meta": {
+    "author": "Pradeep Sahoo",
+    "generated_by": "scripts/generate_synthetic_data.py",
+    "synthetic": true
+  },
+  "change": "CHG0030502",
+  "pull_requests": [
+    {
+      "id": "PR #301",
+      "title": "Points expiry lookup",
+      "files": [
+        {
+          "path": "code/file_1.java",
+          "kind": "code"
+        },
+        {
+          "path": "code/file_2.java",
+          "kind": "code"
+        },
+        {
+          "path": "code/file_3.java",
+          "kind": "code"
+        },
+        {
+          "path": "code/file_4.java",
+          "kind": "code"
+        },
+        {
+          "path": "code/file_5.java",
+          "kind": "code"
+        },
+        {
+          "path": "code/file_6.java",
+          "kind": "code"
+        },
+        {
+          "path": "code/file_7.java",
+          "kind": "code"
+        },
+        {
+          "path": "code/file_8.java",
+          "kind": "code"
+        },
+        {
+          "path": "code/file_9.java",
+          "kind": "code"
+        }
+      ],
+      "lines_changed": 210
+    }
+  ],
+  "queries": [
+    {
+      "table": "points_txn",
+      "rows_estimate": 48000000,
+      "index_covered": false,
+      "where": "member_id, expires_at"
+    }
+  ],
+  "coverage": {
+    "changed_lines_pct": 74,
+    "run": "CI run 9688"
+  }
+}

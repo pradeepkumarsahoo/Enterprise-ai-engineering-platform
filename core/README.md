@@ -23,20 +23,23 @@ core/                          ecc-core: shared platform code, no use-case logic
     safety.py                  secret redaction and prompt-injection flagging
     audit.py                   append-only JSON Lines audit log
     sources.py                 read-only sources shared by several use cases (runbooks)
+    figures.py                 the invented-figures check for drafted text
+    page.py                    shared look of the HTML pages use cases write
     servicenow.py              read-only ServiceNow connector: REST Table API or fixtures
   tests/
 use-cases/
   incident-investigation/      ecc-incident     · use case 1
   knowledge-runbooks/          ecc-knowledge    · use case 2
   architecture-adlc/           ecc-architecture · use case 3
+  change-risk/                 ecc-change       · use case 4
     README.md                  what it does, commands, settings, code map
     pyproject.toml             depends on ecc-core only
     src/ecc_<name>/            the package; __init__.py declares USE_CASE
     data/synthetic/            its sample data and labels
     tests/
     reports/                   committed sample outputs
-shared-data/synthetic/         data read by more than one use case (runbooks)
-scripts/                       generate_synthetic_data.py, screenshot_architecture.py
+shared-data/synthetic/         data read by more than one use case (runbooks, service catalogue, ServiceNow fixtures)
+scripts/                       generate_synthetic_data.py, screenshots.py
 runs/                          outputs, per use case (git-ignored)
 ```
 
@@ -56,6 +59,7 @@ python ecc.py config validate                # check the configuration and every
 python ecc.py incident replay
 python ecc.py knowledge evaluate
 python ecc.py architecture run --requirement-doc use-cases/architecture-adlc/data/synthetic/requirement-document.md
+python ecc.py change assess
 python -m pytest                             # every package's tests, no network
 ```
 
@@ -64,7 +68,7 @@ Each use case's README lists its commands.
 **Install as packages** (optional), then use `ecc` instead of `python ecc.py`:
 
 ```bash
-pip install -e core -e use-cases/incident-investigation -e use-cases/knowledge-runbooks -e use-cases/architecture-adlc
+pip install -e core -e use-cases/incident-investigation -e use-cases/knowledge-runbooks -e use-cases/architecture-adlc -e use-cases/change-risk
 pip install -e "core[claude]"                # only for provider = "claude"
 ```
 

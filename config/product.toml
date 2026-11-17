@@ -28,6 +28,7 @@ fallbacks = "default"          # server-side refusal fallback; "" turns it off
 # Read-only sources shared by more than one use case.
 [sources]
 runbooks = "shared-data/synthetic/runbooks.json"
+catalogue = "shared-data/synthetic/catalogue.json"      # service catalogue: owners, SLOs, contract consumers
 
 # Read-only connectors to systems of record.
 # ServiceNow: the URL below is a DUMMY instance. With transport = "fixture" the connector reads
@@ -112,3 +113,49 @@ invented_figures_max = 0
 decisions_made_without_approval_max = 0
 diagram_issues_max = 0
 note = "Use case 3. Placeholder thresholds; replace with targets agreed with the architecture review board."
+
+# ------------------------------------------------------------------ use case 4
+[use_cases.change]
+enabled = true
+module = "ecc_change"
+
+[use_cases.change.paths]
+changesets_dir = "use-cases/change-risk/data/synthetic/changesets"   # PR diffs, migrations, contracts, coverage
+calendar = "use-cases/change-risk/data/synthetic/release_calendar.json"
+
+# Risk = sum of the weights of the factors that fire, capped at 10. Who must approve (two people
+# for a high score, never the requester or an agent) is governance and lives in code.
+[use_cases.change.settings]
+weight_sensitive_config = 2.5      # capacity or timeout setting changed
+weight_capacity_cut = 1.0          # ... and cut by at least capacity_cut_ratio
+weight_repeat_pattern = 1.5        # same setting, table or contract as a change followed by an incident
+weight_migration_blocking = 1.8    # migration that can lock a large table
+weight_migration_online = 0.6
+weight_unindexed_query = 1.8       # new query on a large table without an index
+weight_contract_base = 0.5         # contract change: base + per consumer, up to max
+weight_contract_per_consumer = 0.25
+weight_contract_max = 1.5
+weight_coverage_gap = 0.8
+weight_deploy_window = 0.5         # outside the low-traffic window
+weight_freeze = 2.0                # inside a change freeze
+weight_recent_instability = 0.4    # incidents on the service in the last instability_days
+weight_no_rollback = 0.5           # no runbook, or a stale one
+weight_change_size = 0.3
+medium_min = 3.0
+high_min = 7.0                     # a high score needs a second approver
+capacity_cut_ratio = 0.5
+large_table_rows = 1000000
+coverage_gate_pct = 80
+instability_days = 30
+runbook_stale_days = 180
+change_size_files = 20
+outcome_window_hours = 48          # an incident this soon after a change is linked to it
+as_of = "2026-11-17"               # "now" for the synthetic data; in production, today's date
+
+[use_cases.change.gates]
+recall_min = 0.8                   # backtest: incident-causing changes scored medium or high
+false_alarm_max = 0.3              # backtest: medium or high scores with nothing after them
+rejected_conditions_max = 0
+invented_figures_max = 0
+note = "Use case 4. Placeholder thresholds; replace with targets agreed with release management after a backtest on real history."
+

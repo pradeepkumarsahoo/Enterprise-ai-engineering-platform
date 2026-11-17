@@ -1,0 +1,45 @@
+{
+  "_meta": {
+    "author": "Pradeep Sahoo",
+    "generated_by": "scripts/generate_synthetic_data.py",
+    "synthetic": true
+  },
+  "change": "CHG0030411",
+  "pull_requests": [
+    {
+      "id": "PR #201",
+      "title": "Tune connection pool",
+      "files": [
+        {
+          "path": "config/file_1.yaml",
+          "kind": "config"
+        },
+        {
+          "path": "code/file_1.java",
+          "kind": "code"
+        },
+        {
+          "path": "code/file_2.java",
+          "kind": "code"
+        },
+        {
+          "path": "code/file_3.java",
+          "kind": "code"
+        }
+      ],
+      "lines_changed": 40
+    }
+  ],
+  "config_diff": [
+    {
+      "key": "MAX_POOL",
+      "from": "50",
+      "to": "10",
+      "file": "application-prod.yaml"
+    }
+  ],
+  "coverage": {
+    "changed_lines_pct": 85,
+    "run": "CI run 9401"
+  }
+}

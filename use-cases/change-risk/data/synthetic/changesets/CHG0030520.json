@@ -1,0 +1,25 @@
+{
+  "_meta": {
+    "author": "Pradeep Sahoo",
+    "generated_by": "scripts/generate_synthetic_data.py",
+    "synthetic": true
+  },
+  "change": "CHG0030520",
+  "pull_requests": [
+    {
+      "id": "PR #305",
+      "title": "Docs links",
+      "files": [
+        {
+          "path": "docs/file_1.md",
+          "kind": "docs"
+        },
+        {
+          "path": "docs/file_2.md",
+          "kind": "docs"
+        }
+      ],
+      "lines_changed": 12
+    }
+  ]
+}

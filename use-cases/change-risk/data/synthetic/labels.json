@@ -1,0 +1,25 @@
+{
+  "_meta": {
+    "author": "Pradeep Sahoo",
+    "generated_by": "scripts/generate_synthetic_data.py",
+    "synthetic": true
+  },
+  "bands": {
+    "CHG0030411": "medium",
+    "CHG0030415": "medium",
+    "CHG0030488": "medium",
+    "CHG0030502": "medium",
+    "CHG0030520": "low",
+    "CHG0030530": "low",
+    "CHG0030540": "low",
+    "CHG0030601": "high",
+    "CHG0030602": "low",
+    "CHG0030603": "medium"
+  },
+  "caused_incident": {
+    "CHG0030411": "INC0010987",
+    "CHG0030488": "INC0011007",
+    "CHG0030502": "INC0011011",
+    "CHG0030530": "INC0011024"
+  }
+}

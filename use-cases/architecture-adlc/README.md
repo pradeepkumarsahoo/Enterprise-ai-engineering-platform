@@ -19,7 +19,7 @@ python ecc.py architecture run --requirement-doc use-cases/architecture-adlc/dat
 python ecc.py architecture evaluate                 # from requirement.json; add --requirement-doc to start from the document
 python ecc.py architecture feedback ADR-007 --accept yes --by arb.chair
 python ecc.py architecture report
-python scripts/screenshot_architecture.py           # regenerate the screenshot above (needs Edge or Chrome)
+python scripts/screenshots.py architecture  # regenerate the screenshot above (needs Edge or Chrome)
 ```
 
 Add `--provider claude` to `ingest`, `run` or `evaluate` to use Claude. Outputs go to

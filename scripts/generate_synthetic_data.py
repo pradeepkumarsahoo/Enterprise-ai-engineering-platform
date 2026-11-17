@@ -9,6 +9,10 @@ parameters with a fixed random seed, so the output is reproducible:
 Writes, under the repository root:
     shared-data/synthetic/runbooks.json                         runbooks (use cases 1 and 2)
     shared-data/synthetic/servicenow/<table>.json               dummy ServiceNow instance (Table API-shaped)
+    shared-data/synthetic/catalogue.json                        service catalogue: owners, SLOs, contract consumers
+    use-cases/change-risk/data/synthetic/changesets/<CHG>.json  what each change contains (PRs, diffs, coverage)
+    use-cases/change-risk/data/synthetic/release_calendar.json  low-traffic windows, freezes, release policy
+    use-cases/change-risk/data/synthetic/labels.json            expected bands and outcomes (scoring only)
     use-cases/incident-investigation/data/synthetic/incidents/  past incidents (replay input, no labels)
     use-cases/incident-investigation/data/synthetic/labels.json ground truth + human baseline (scoring only)
     use-cases/incident-investigation/data/synthetic/live/       new incidents for shadow mode
@@ -37,6 +41,7 @@ SHARED = REPO / "shared-data" / "synthetic"
 INC = REPO / "use-cases" / "incident-investigation" / "data" / "synthetic"
 KNO = REPO / "use-cases" / "knowledge-runbooks" / "data" / "synthetic"
 ARC = REPO / "use-cases" / "architecture-adlc" / "data" / "synthetic"
+CHG = REPO / "use-cases" / "change-risk" / "data" / "synthetic"
 STEP_S = 120          # metric resolution: 2-minute buckets
 POINTS = 16           # 32-minute window
 ONSET = 6             # index where the problem starts
@@ -623,8 +628,16 @@ def _snow_inc(number, ci, priority, opened, resolved, short, description, close_
             else "Solved (Work Around)", "close_notes": close_notes, "problem_id": problem}
 
 
+def _chg(number, ci, short, start, end, by, close_code="Successful", state="Closed", type_="Normal"):
+    return {"number": number, "cmdb_ci": ci, "type": type_, "state": state, "short_description": short,
+            "start_date": start, "end_date": end, "requested_by": by, "close_code": close_code}
+
+
 SERVICENOW = {
     "incident": [
+        _snow_inc("INC0011007", "loyalty-ledger", "3", "2026-09-12 10:40:00", "2026-09-12 10:52:00",
+                  "Accrual writes blocked", "Alert: accrual write latency > 2 s for 5 min.",
+                  "Migration CHG0030488 locked points_txn for 6 minutes. Lock released when the migration finished."),
         _snow_inc("INC0010987", "membership-api", "2", "2026-08-04 09:14:00", "2026-08-04 10:21:00",
                   "Membership API timeouts",
                   "Alert from monitoring: p95 latency > 800 ms for 5 min on membership-api.\n"
@@ -670,18 +683,26 @@ SERVICENOW = {
                   "Accrual latency", "Alert: accrual p95 > 600 ms for 5 min.", "Restarted pods, issue resolved."),
     ],
     "change_request": [
-        {"number": "CHG0030411", "cmdb_ci": "membership-api", "type": "Normal", "state": "Closed",
-         "short_description": "Deploy membership-api v2.11 (connection pool settings)",
-         "start_date": "2026-08-04 09:02:00", "end_date": "2026-08-04 09:06:00"},
-        {"number": "CHG0030415", "cmdb_ci": "membership-api", "type": "Emergency", "state": "Closed",
-         "short_description": "Restore membership-api DB pool size to 50 (fix for INC0010987)",
-         "start_date": "2026-08-04 10:05:00", "end_date": "2026-08-04 10:12:00"},
-        {"number": "CHG0030502", "cmdb_ci": "loyalty-ledger", "type": "Normal", "state": "Closed",
-         "short_description": "Release loyalty-ledger v3.5: add points-expiry lookup (new query on points_txn)",
-         "start_date": "2026-09-19 15:34:00", "end_date": "2026-09-19 15:38:00"},
-        {"number": "CHG0030530", "cmdb_ci": "order-service", "type": "Normal", "state": "Closed",
-         "short_description": "Release order-service v4.2: order cache", "start_date": "2026-10-06 10:00:00",
-         "end_date": "2026-10-06 10:20:00"},
+        _chg("CHG0030411", "membership-api", "Deploy membership-api v2.11 (connection pool settings)",
+             "2026-08-04 09:02:00", "2026-08-04 09:06:00", "mo.dev", "Unsuccessful"),
+        _chg("CHG0030415", "membership-api", "Restore membership-api DB pool size to 50 (fix for INC0010987)",
+             "2026-08-04 10:05:00", "2026-08-04 10:12:00", "ria.owner", type_="Emergency"),
+        _chg("CHG0030488", "loyalty-ledger", "Migration 0137: add tier_code to points_txn",
+             "2026-09-12 10:00:00", "2026-09-12 10:30:00", "dana.dev", "Unsuccessful"),
+        _chg("CHG0030502", "loyalty-ledger", "Release loyalty-ledger v3.5: add points-expiry lookup (new query on points_txn)",
+             "2026-09-19 15:34:00", "2026-09-19 15:38:00", "dana.dev", "Unsuccessful"),
+        _chg("CHG0030520", "partner-gateway", "Update partner API documentation links",
+             "2026-09-02 08:00:00", "2026-09-02 08:05:00", "kai.dev"),
+        _chg("CHG0030530", "order-service", "Release order-service v4.2: order cache",
+             "2026-10-08 09:00:00", "2026-10-08 09:20:00", "lee.dev", "Successful"),
+        _chg("CHG0030540", "promotion-engine", "Release promotion-engine v5.1: new promo rule type",
+             "2026-10-14 07:30:00", "2026-10-14 07:40:00", "sam.dev"),
+        _chg("CHG0030601", "loyalty-ledger", "Release loyalty-ledger v3.8: points expiry, pool settings, PointsAccrued v2",
+             "2026-11-20 16:30:00", "2026-11-20 17:00:00", "dana.dev", "", "Scheduled"),
+        _chg("CHG0030602", "promotion-engine", "Release promotion-engine v5.2: stackable promotions",
+             "2026-11-24 07:00:00", "2026-11-24 07:10:00", "sam.dev", "", "Scheduled"),
+        _chg("CHG0030603", "membership-api", "Release membership-api v2.15: client timeout, email index",
+             "2026-11-25 08:00:00", "2026-11-25 08:15:00", "mo.dev", "", "Scheduled"),
     ],
     "problem": [
         {"number": "PRB0040123", "short_description": "Membership API connection pool exhaustion",
@@ -691,6 +712,101 @@ SERVICENOW = {
         {"parent": "notification-worker", "child": "sms-provider", "type": "Depends on::Used by"},
         {"parent": "loyalty-ledger", "child": "membership-api", "type": "Depends on::Used by"},
     ],
+}
+
+
+# ---------------------------------------------------------------- use case 4: change risk
+# What a change contains, from pull requests and CI (not in ServiceNow). One file per change.
+
+
+def _files(**kinds) -> list[dict]:
+    out = []
+    for kind, n in kinds.items():
+        ext = {"config": "yaml", "migration": "sql", "contract": "avsc", "docs": "md"}.get(kind, "java")
+        out += [{"path": f"{kind}/file_{i + 1}.{ext}", "kind": kind} for i in range(n)]
+    return out
+
+
+CHANGESETS = {
+    "CHG0030411": {"pull_requests": [{"id": "PR #201", "title": "Tune connection pool", "files": _files(config=1, code=3),
+                                      "lines_changed": 40}],
+                   "config_diff": [{"key": "MAX_POOL", "from": "50", "to": "10", "file": "application-prod.yaml"}],
+                   "coverage": {"changed_lines_pct": 85, "run": "CI run 9401"}},
+    "CHG0030415": {"pull_requests": [{"id": "PR #204", "title": "Restore pool size", "files": _files(config=1),
+                                      "lines_changed": 2}],
+                   "config_diff": [{"key": "hikari.maximum-pool-size", "from": "10", "to": "50",
+                                    "file": "application-prod.yaml"}]},
+    "CHG0030488": {"pull_requests": [{"id": "PR #288", "title": "Add tier_code", "files": _files(migration=1, code=2),
+                                      "lines_changed": 60}],
+                   "migrations": [{"id": "migration 0137", "table": "points_txn", "operation": "add_column",
+                                   "column": "tier_code", "nullable": False, "rows_estimate": 48000000, "online": False}],
+                   "coverage": {"changed_lines_pct": 50, "run": "CI run 9620"}},
+    "CHG0030502": {"pull_requests": [{"id": "PR #301", "title": "Points expiry lookup", "files": _files(code=9),
+                                      "lines_changed": 210}],
+                   "queries": [{"table": "points_txn", "rows_estimate": 48000000, "index_covered": False,
+                                "where": "member_id, expires_at"}],
+                   "coverage": {"changed_lines_pct": 74, "run": "CI run 9688"}},
+    "CHG0030520": {"pull_requests": [{"id": "PR #305", "title": "Docs links", "files": _files(docs=2),
+                                      "lines_changed": 12}]},
+    "CHG0030530": {"pull_requests": [{"id": "PR #312", "title": "Order cache", "files": _files(code=27, test=4),
+                                      "lines_changed": 1450}],
+                   "coverage": {"changed_lines_pct": 82, "run": "CI run 9790"}},
+    "CHG0030540": {"pull_requests": [{"id": "PR #318", "title": "Promo rule type", "files": _files(code=5, test=2),
+                                      "lines_changed": 260}],
+                   "coverage": {"changed_lines_pct": 90, "run": "CI run 9811"}},
+    "CHG0030601": {"pull_requests": [
+                       {"id": "PR #331", "title": "Points expiry and pool settings",
+                        "files": _files(config=2, migration=1, code=12, test=2), "lines_changed": 640},
+                       {"id": "PR #334", "title": "PointsAccrued v2", "files": _files(contract=1, code=5),
+                        "lines_changed": 180}],
+                   "config_diff": [{"key": "ledger.db.pool.max", "from": "40", "to": "25", "file": "ledger-prod.yaml"}],
+                   "migrations": [{"id": "migration 0142", "table": "points_txn", "operation": "add_column",
+                                   "column": "expiry_at", "nullable": False, "rows_estimate": 48000000, "online": False}],
+                   "contract_changes": [{"contract": "PointsAccrued", "change": "rename", "field_from": "pts",
+                                         "field_to": "points"}],
+                   "coverage": {"changed_lines_pct": 61, "run": "CI run 9917"}},
+    "CHG0030602": {"pull_requests": [{"id": "PR #340", "title": "Stackable promotions", "files": _files(code=4, test=2),
+                                      "lines_changed": 190}],
+                   "coverage": {"changed_lines_pct": 88, "run": "CI run 9930"}},
+    "CHG0030603": {"pull_requests": [{"id": "PR #342", "title": "Client timeout and email index",
+                                      "files": _files(config=1, migration=1, code=3), "lines_changed": 85}],
+                   "config_diff": [{"key": "http.client.timeout_ms", "from": "2000", "to": "5000",
+                                    "file": "application-prod.yaml"}],
+                   "migrations": [{"id": "migration 0091", "table": "members", "operation": "add_index",
+                                   "column": "email", "nullable": True, "rows_estimate": 1200000, "online": True}],
+                   "coverage": {"changed_lines_pct": 72, "run": "CI run 9941"}},
+}
+
+# The service catalogue: owners, SLOs, and who consumes which event or API contract.
+CATALOGUE = {
+    "services": {
+        "membership-api": {"owner": "Membership & Identity", "slo_p95_ms": 300},
+        "loyalty-ledger": {"owner": "Loyalty", "slo_p95_ms": 400},
+        "promotion-engine": {"owner": "Loyalty", "slo_p95_ms": 500},
+        "notification-worker": {"owner": "Platform", "slo_p95_ms": 1000},
+        "partner-gateway": {"owner": "Commerce", "slo_p95_ms": 600},
+        "order-service": {"owner": "Commerce", "slo_p95_ms": 450},
+    },
+    "contracts": {
+        "PointsAccrued": {"producer": "loyalty-ledger", "consumers": {
+            "promotion-engine": {"contract_tests": True}, "notification-worker": {"contract_tests": True},
+            "data-warehouse": {"contract_tests": True}, "partner-gateway": {"contract_tests": False}}},
+    },
+}
+
+# When changes should ship, and the standard release conditions.
+RELEASE_CALENDAR = {
+    "low_traffic_windows": [{"days": ["Tue", "Wed", "Thu"], "from": "06:00", "to": "10:00"}],
+    "freezes": [{"from": "2026-11-26", "to": "2026-11-30", "reason": "Black Friday trading period"}],
+    "release_policy": {"canary_pct": 5, "canary_minutes": 30},
+}
+
+CHANGE_LABELS = {   # expected results, written by hand from the rules; never read by the scorer
+    "bands": {"CHG0030411": "medium", "CHG0030415": "medium", "CHG0030488": "medium", "CHG0030502": "medium",
+              "CHG0030520": "low", "CHG0030530": "low", "CHG0030540": "low",
+              "CHG0030601": "high", "CHG0030602": "low", "CHG0030603": "medium"},
+    "caused_incident": {"CHG0030411": "INC0010987", "CHG0030488": "INC0011007", "CHG0030502": "INC0011011",
+                        "CHG0030530": "INC0011024"},
 }
 
 
@@ -735,6 +851,12 @@ def _write(path: Path, payload) -> None:
 def main() -> None:
     for d in (SHARED, SHARED / "servicenow", INC / "incidents", INC / "live", KNO, ARC):
         d.mkdir(parents=True, exist_ok=True)
+    (CHG / "changesets").mkdir(parents=True, exist_ok=True)
+    for number, cs in CHANGESETS.items():
+        _write(CHG / "changesets" / f"{number}.json", {"_meta": META, "change": number, **cs})
+    _write(SHARED / "catalogue.json", {"_meta": META, **CATALOGUE})
+    _write(CHG / "release_calendar.json", {"_meta": META, **RELEASE_CALENDAR})
+    _write(CHG / "labels.json", {"_meta": META, **CHANGE_LABELS})
     for table, rows in SERVICENOW.items():
         _write(SHARED / "servicenow" / f"{table}.json", {"_meta": META, "result": rows})
     for folder, builders in (("incidents", (inc_0987, inc_1011, inc_0995, inc_1003, inc_1019, inc_1024, inc_1039, inc_1036)),

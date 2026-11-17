@@ -1,0 +1,45 @@
+{
+  "_meta": {
+    "author": "Pradeep Sahoo",
+    "generated_by": "scripts/generate_synthetic_data.py",
+    "synthetic": true
+  },
+  "change": "CHG0030602",
+  "pull_requests": [
+    {
+      "id": "PR #340",
+      "title": "Stackable promotions",
+      "files": [
+        {
+          "path": "code/file_1.java",
+          "kind": "code"
+        },
+        {
+          "path": "code/file_2.java",
+          "kind": "code"
+        },
+        {
+          "path": "code/file_3.java",
+          "kind": "code"
+        },
+        {
+          "path": "code/file_4.java",
+          "kind": "code"
+        },
+        {
+          "path": "test/file_1.java",
+          "kind": "test"
+        },
+        {
+          "path": "test/file_2.java",
+          "kind": "test"
+        }
+      ],
+      "lines_changed": 190
+    }
+  ],
+  "coverage": {
+    "changed_lines_pct": 88,
+    "run": "CI run 9930"
+  }
+}

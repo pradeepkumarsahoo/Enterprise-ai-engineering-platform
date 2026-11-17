@@ -1,0 +1,60 @@
+{
+  "_meta": {
+    "author": "Pradeep Sahoo",
+    "generated_by": "scripts/generate_synthetic_data.py",
+    "synthetic": true
+  },
+  "change": "CHG0030603",
+  "pull_requests": [
+    {
+      "id": "PR #342",
+      "title": "Client timeout and email index",
+      "files": [
+        {
+          "path": "config/file_1.yaml",
+          "kind": "config"
+        },
+        {
+          "path": "migration/file_1.sql",
+          "kind": "migration"
+        },
+        {
+          "path": "code/file_1.java",
+          "kind": "code"
+        },
+        {
+          "path": "code/file_2.java",
+          "kind": "code"
+        },
+        {
+          "path": "code/file_3.java",
+          "kind": "code"
+        }
+      ],
+      "lines_changed": 85
+    }
+  ],
+  "config_diff": [
+    {
+      "key": "http.client.timeout_ms",
+      "from": "2000",
+      "to": "5000",
+      "file": "application-prod.yaml"
+    }
+  ],
+  "migrations": [
+    {
+      "id": "migration 0091",
+      "table": "members",
+      "operation": "add_index",
+      "column": "email",
+      "nullable": true,
+      "rows_estimate": 1200000,
+      "online": true
+    }
+  ],
+  "coverage": {
+    "changed_lines_pct": 72,
+    "run": "CI run 9941"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "_meta": {
+    "author": "Pradeep Sahoo",
+    "generated_by": "scripts/generate_synthetic_data.py",
+    "synthetic": true
+  },
+  "low_traffic_windows": [
+    {
+      "days": [
+        "Tue",
+        "Wed",
+        "Thu"
+      ],
+      "from": "06:00",
+      "to": "10:00"
+    }
+  ],
+  "freezes": [
+    {
+      "from": "2026-11-26",
+      "to": "2026-11-30",
+      "reason": "Black Friday trading period"
+    }
+  ],
+  "release_policy": {
+    "canary_pct": 5,
+    "canary_minutes": 30
+  }
+}

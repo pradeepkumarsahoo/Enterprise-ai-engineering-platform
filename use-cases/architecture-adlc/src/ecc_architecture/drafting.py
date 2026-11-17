@@ -17,8 +17,9 @@ repository or the backlog.
 from __future__ import annotations
 
 import json
-import re
 from dataclasses import asdict, dataclass, field
+
+from ecc_core.figures import figures
 
 from .assess import Assessment, fmt, target_text
 from .sources import ArchitectureInputs
@@ -241,21 +242,6 @@ class MockDrafter:
 
 
 # ------------------------------------------------------------------ validation
-
-_IDS = re.compile(r"\b[A-Z]{1,5}-\d+\b|\b[A-Z]\d+\b|\bp\d+\b")      # NFR-05, ADR-007, A12, p99
-_NUM = re.compile(r"(?<![\w.])\d+(?:[.,]\d+)*")
-
-
-def figures(text: str) -> set[str]:
-    """Numbers in text, ignoring IDs. 2,000 -> 2000; 99.90 -> 99.9."""
-    out = set()
-    for n in _NUM.findall(_IDS.sub(" ", text)):
-        n = n.replace(",", "")
-        if "." in n:
-            n = n.rstrip("0").rstrip(".")
-        out.add(n)
-    return out
-
 
 def validate_drafts(raw: dict, inp: DraftInput) -> tuple[AdrDraft | None, list[Story], list[Rejection]]:
     a, req = inp.assessment, inp.requirement

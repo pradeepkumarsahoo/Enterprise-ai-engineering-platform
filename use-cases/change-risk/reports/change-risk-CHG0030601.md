@@ -1,0 +1,69 @@
+# Change risk · CHG0030601 · loyalty-ledger
+
+> Pre-deploy assessment. The score comes from rules in code; the model only explains it and drafts release conditions. Approve or reject with `ecc change approve CHG0030601`.
+
+**Release loyalty-ledger v3.8: points expiry, pool settings, PointsAccrued v2** · planned 2026-11-20 16:30:00 UTC · requested by dana.dev
+
+## Score: 9.3 / 10 · high
+
+Release gate: **awaiting 2 approver(s)** · needs 2 approver(s) from release-manager, engineering-lead, sre-lead; the requester cannot approve. Assessment `ac5a8caabde3`.
+
+| Factor | Signal | Weight | Evidence |
+|---|---|---|---|
+| Capacity or timeout setting changed | ledger.db.pool.max: 40 → 25 | +2.5 | C4, C2 |
+| Repeats a change that was followed by an incident | CHG0030502 → INC0011011 (same table points_txn); CHG0030488 → INC0011007 (same table points_txn); CHG0030411 → INC0010987 (same setting (pool)) | +1.5 | C5, C6, C7 |
+| Schema migration that can lock a large table | migration 0142 on points_txn (48M rows) | +1.8 | C8 |
+| Event or API contract change with consumers | PointsAccrued pts → points; 4 consumers | +1.5 | C9 |
+| Test coverage of changed lines below the gate | 61% against 80% | +0.8 | C10 |
+| Outside the low-traffic window | Fri 16:30 UTC; window Tue, Wed, Thu 06:00–10:00 UTC | +0.5 | C11 |
+| Incidents on loyalty-ledger in the last 30 days | INC0011039 | +0.4 | C12 |
+| Large change | 23 files (threshold 20) | +0.3 | C2, C3 |
+
+Score = sum of weights, capped at 10 · change-risk rules v1.0 · weights set in the product configuration.
+
+## Summary
+
+CHG0030601 scores 9.3 (high). Largest risks: capacity or timeout setting changed; schema migration that can lock a large table; repeats a change that was followed by an incident. Not established: Whether partner-gateway still reads the old pts field of PointsAccrued: it has no contract tests.
+
+## Similar past changes
+
+- **CHG0030502** on loyalty-ledger → **INC0011011** (same table points_txn)
+- **CHG0030488** on loyalty-ledger → **INC0011007** (same table points_txn)
+- **CHG0030411** on membership-api → **INC0010987** (same setting (pool))
+
+## Suggested release conditions
+
+- Ship the ledger.db.pool.max change as its own deploy, after a load test at peak traffic (sensitive_config; C4, C2)
+- Review CHG0030502 (INC0011011), CHG0030488 (INC0011007), CHG0030411 (INC0010987) with the owning team before release: this change repeats that pattern (repeat_pattern; C5, C6, C7)
+- Run migration 0142 online with a backfill job, as its own deploy before the code release (migration_blocking; C8)
+- Keep pts readable alongside points in PointsAccrued until every consumer has moved; add contract tests for partner-gateway first (contract_change; C9)
+- Raise coverage of changed lines to the 80% gate, or record a waiver from the owning team (coverage_gap; C10)
+- Move the deploy into the low-traffic window (Tue, Wed, Thu 06:00–10:00 UTC) (deploy_window; C11)
+- Confirm the follow-up actions from INC0011039 are closed before release (recent_instability; C12)
+- Split the release so that configuration, migration and code ship separately (change_size; C2, C3)
+- Canary 5% for 30 min; halt and roll back if p95 exceeds 400 ms (release_policy; C15, C14)
+
+## Could not establish
+
+- Whether partner-gateway still reads the old pts field of PointsAccrued: it has no contract tests
+
+## Evidence
+
+- **C1** CHG0030601 · loyalty-ledger · Release loyalty-ledger v3.8: points expiry, pool settings, PointsAccrued v2 · requested by dana.dev · planned Fri 2026-11-20 16:30 UTC
+- **C2** PR #331 “Points expiry and pool settings”: 17 files (12 code, 2 config, 1 migration, 2 test), 640 lines
+- **C3** PR #334 “PointsAccrued v2”: 6 files (5 code, 1 contract), 180 lines
+- **C4** ledger.db.pool.max: 40 → 25 (-38%) in ledger-prod.yaml
+- **C5** CHG0030502 on loyalty-ledger was followed by INC0011011 within 48 h; same table points_txn
+- **C6** CHG0030488 on loyalty-ledger was followed by INC0011007 within 48 h; same table points_txn
+- **C7** CHG0030411 on membership-api was followed by INC0010987 within 48 h; same setting (pool)
+- **C8** migration 0142: add column expiry_at on points_txn (48M rows), non-null, not online
+- **C9** PointsAccrued: field pts renamed to points; 4 consumers (data-warehouse, notification-worker, partner-gateway, promotion-engine); without contract tests: partner-gateway
+- **C10** 61% of changed lines covered in CI run 9917 (gate 80%)
+- **C11** Planned Fri 16:30 UTC is outside the low-traffic window (Tue, Wed, Thu 06:00–10:00 UTC)
+- **C12** INC0011039 on loyalty-ledger, opened 2026-10-28 14:02:00 UTC: Accrual latency
+- **C13** RB-023 “Slow query investigation” covers loyalty-ledger; last validated 2026-09-30 (48 days before assessment)
+- **C14** loyalty-ledger SLO: p95 400 ms
+- **C15** Release policy: canary 5% for 30 min, then full rollout
+- **C16** Score 9.3 of 10 (high); medium from 3, high from 7; a high score needs a second approver
+
+_Generated by Engineering Command Centre · use case 4 · Author: Pradeep Sahoo_

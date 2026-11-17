@@ -1,0 +1,147 @@
+{
+  "_meta": {
+    "author": "Pradeep Sahoo",
+    "generated_by": "scripts/generate_synthetic_data.py",
+    "synthetic": true
+  },
+  "change": "CHG0030601",
+  "pull_requests": [
+    {
+      "id": "PR #331",
+      "title": "Points expiry and pool settings",
+      "files": [
+        {
+          "path": "config/file_1.yaml",
+          "kind": "config"
+        },
+        {
+          "path": "config/file_2.yaml",
+          "kind": "config"
+        },
+        {
+          "path": "migration/file_1.sql",
+          "kind": "migration"
+        },
+        {
+          "path": "code/file_1.java",
+          "kind": "code"
+        },
+        {
+          "path": "code/file_2.java",
+          "kind": "code"
+        },
+        {
+          "path": "code/file_3.java",
+          "kind": "code"
+        },
+        {
+          "path": "code/file_4.java",
+          "kind": "code"
+        },
+        {
+          "path": "code/file_5.java",
+          "kind": "code"
+        },
+        {
+          "path": "code/file_6.java",
+          "kind": "code"
+        },
+        {
+          "path": "code/file_7.java",
+          "kind": "code"
+        },
+        {
+          "path": "code/file_8.java",
+          "kind": "code"
+        },
+        {
+          "path": "code/file_9.java",
+          "kind": "code"
+        },
+        {
+          "path": "code/file_10.java",
+          "kind": "code"
+        },
+        {
+          "path": "code/file_11.java",
+          "kind": "code"
+        },
+        {
+          "path": "code/file_12.java",
+          "kind": "code"
+        },
+        {
+          "path": "test/file_1.java",
+          "kind": "test"
+        },
+        {
+          "path": "test/file_2.java",
+          "kind": "test"
+        }
+      ],
+      "lines_changed": 640
+    },
+    {
+      "id": "PR #334",
+      "title": "PointsAccrued v2",
+      "files": [
+        {
+          "path": "contract/file_1.avsc",
+          "kind": "contract"
+        },
+        {
+          "path": "code/file_1.java",
+          "kind": "code"
+        },
+        {
+          "path": "code/file_2.java",
+          "kind": "code"
+        },
+        {
+          "path": "code/file_3.java",
+          "kind": "code"
+        },
+        {
+          "path": "code/file_4.java",
+          "kind": "code"
+        },
+        {
+          "path": "code/file_5.java",
+          "kind": "code"
+        }
+      ],
+      "lines_changed": 180
+    }
+  ],
+  "config_diff": [
+    {
+      "key": "ledger.db.pool.max",
+      "from": "40",
+      "to": "25",
+      "file": "ledger-prod.yaml"
+    }
+  ],
+  "migrations": [
+    {
+      "id": "migration 0142",
+      "table": "points_txn",
+      "operation": "add_column",
+      "column": "expiry_at",
+      "nullable": false,
+      "rows_estimate": 48000000,
+      "online": false
+    }
+  ],
+  "contract_changes": [
+    {
+      "contract": "PointsAccrued",
+      "change": "rename",
+      "field_from": "pts",
+      "field_to": "points"
+    }
+  ],
+  "coverage": {
+    "changed_lines_pct": 61,
+    "run": "CI run 9917"
+  }
+}
