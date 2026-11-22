@@ -4,6 +4,7 @@
     python scripts/screenshots.py                  # every target
     python scripts/screenshots.py architecture     # use case 3: requirement document -> architecture
     python scripts/screenshots.py change           # use case 4: change risk report for CHG0030601
+    python scripts/screenshots.py finops           # use case 5: cloud cost by team
 
 Each target runs the real command through the product configuration, opens the HTML page it wrote
 in a headless Chromium browser (Edge or Chrome) and saves the top of the page. Needs Edge or Chrome;
@@ -30,6 +31,8 @@ TARGETS = {
                      "proposal/REQ-LOY-001.html", "18-architecture-from-document.png", (1440, 1010)),
     "change": (["change", "--workdir", "{w}", "assess", "CHG0030601"],
                "reports/CHG0030601.html", "19-change-risk-assessment.png", (1440, 1060)),
+    "finops": (["finops", "--workdir", "{w}", "analyse"],
+               "report.html", "20-finops-cost-by-team.png", (1440, 1500)),
 }
 
 CANDIDATES = [

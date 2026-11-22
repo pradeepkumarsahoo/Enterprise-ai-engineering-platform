@@ -159,3 +159,43 @@ rejected_conditions_max = 0
 invented_figures_max = 0
 note = "Use case 4. Placeholder thresholds; replace with targets agreed with release management after a backtest on real history."
 
+
+# ------------------------------------------------------------------ use case 5
+[use_cases.finops]
+enabled = true
+module = "ecc_finops"
+
+[use_cases.finops.paths]
+finops_dir = "use-cases/finops/data/synthetic"   # cost export, utilisation, config change log, savings register
+
+# Anomaly: z >= z_threshold against the trailing baseline AND increase >= min_increase_usd AND
+# >= min_increase_ratio. Who may approve a recommendation (the owning team, never an agent or
+# FinOps alone) is governance and lives in code.
+[use_cases.finops.settings]
+baseline_months = 6
+min_baseline_months = 4
+z_threshold = 3.0
+stdev_floor_ratio = 0.02           # deviation is at least 2% of the mean, so flat series are not over-sensitive
+min_increase_usd = 1000.0
+min_increase_ratio = 0.10          # steady growth below 10% a month is growth, not an anomaly
+cause_lookback_days = 14
+rightsize_cpu_p95_max = 25.0
+rightsize_mem_p95_max = 40.0
+rightsize_saving_ratio = 0.5
+office_hours_per_week = 65         # 07:00-20:00, Monday to Friday
+always_on_hours_min = 160
+non_prod_envs = "sandbox,staging,dev"
+idle_days = 30
+realised_baseline_months = 3
+rejected_cooldown_days = 180
+as_of = "2026-11-17"               # "now" for the synthetic data; in production, today's date
+
+[use_cases.finops.gates]
+anomaly_precision_min = 0.8
+anomaly_recall_min = 0.8
+cause_accuracy_min = 0.8
+realised_error_max = 0.1           # realised saving within 10% of the labelled value
+rejected_drafts_max = 0
+invented_figures_max = 0
+cloud_changes_max = 0
+note = "Use case 5. Placeholder thresholds; replace with targets agreed with finance and the FinOps lead after a run on a real cost export."

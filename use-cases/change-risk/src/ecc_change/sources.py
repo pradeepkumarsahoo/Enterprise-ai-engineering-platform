@@ -37,6 +37,7 @@ def _read(path: Path) -> dict:
     return data
 
 
+
 @dataclass
 class ChangeInputs:
     changes: dict[str, dict]        # ServiceNow change requests by number

@@ -1,0 +1,38 @@
+{
+  "_meta": {
+    "author": "Pradeep Sahoo",
+    "generated_by": "scripts/generate_synthetic_data.py",
+    "synthetic": true
+  },
+  "recommendations": [
+    {
+      "id": "REC-SCH-platform-sandbox-cluster",
+      "type": "schedule",
+      "team": "Platform",
+      "resource": "platform-sandbox-cluster",
+      "line_item": "Kubernetes nodes",
+      "title": "Stop platform-sandbox-cluster outside office hours",
+      "estimated_monthly_usd": 3065.0,
+      "status": "implemented",
+      "decided_by": "noor.lead",
+      "role": "engineering-lead",
+      "decided_on": "2026-07-20",
+      "implemented_on": "2026-08-01",
+      "change": "CHG0030470"
+    },
+    {
+      "id": "REC-RS-membership-api-nodes",
+      "type": "rightsize",
+      "team": "Membership & Identity",
+      "resource": "membership-api-nodes",
+      "line_item": "Kubernetes nodes",
+      "title": "Rightsize membership-api-nodes one size down",
+      "estimated_monthly_usd": 6000.0,
+      "status": "rejected",
+      "decided_by": "ria.owner",
+      "role": "service-owner",
+      "decided_on": "2026-09-10",
+      "note": "Keep headroom for the Black Friday peak; revisit in the new year"
+    }
+  ]
+}

@@ -17,7 +17,7 @@ a governed AI layer for the software lifecycle and production operations.
 > Independently developed reference concept. All data shown is synthetic, and the prototype uses a
 > deterministic mock AI provider. Nothing here is a production outcome.
 
-**Code:** the first four use cases are implemented, one folder each under [`use-cases/`](use-cases/), on a
+**Code:** the first five use cases are implemented, one folder each under [`use-cases/`](use-cases/), on a
 shared [`core/`](core/), configured by [`config/product.toml`](config/product.toml).
 1. **Incident investigation:** on past incidents first, then alongside on-call engineers.
 2. **Knowledge & runbooks:** stale runbooks, repeat incidents and drafted fixes.
@@ -25,6 +25,8 @@ shared [`core/`](core/), configured by [`config/product.toml`](config/product.to
    and stories, NFR traceability and a container diagram.
 4. **Change risk:** a pre-deploy risk score from rules, similar past changes, release conditions and a
    two-person release gate.
+5. **FinOps:** monthly spend by team, statistically flagged anomalies with their likely cause, and
+   recommendations with estimated and realised savings in separate columns.
 
 See [section 5](#5-implementation) for what is built and
 [section 6](#6-decisions-and-trade-offs-made-during-development) for the decisions behind it.
@@ -269,6 +271,15 @@ that track estimated and realised savings in separate columns.
 
 ![FinOps](docs/stakeholder/screenshots/06-finops.png)
 
+### FinOps — cloud cost by team (working code)
+Like the change-risk screenshot below, this is not the prototype. It is the report page produced by
+the real code (use case 5, [section 5.5](#55-use-case-5--finops)) from the synthetic cost export.
+Monthly spend by team with November's forecast, two flagged anomalies with their likely cause and
+confidence, and recommendations whose estimated and realised savings sit in separate columns.
+Regenerate with `python scripts/screenshots.py finops`.
+
+![FinOps: cloud cost by team](docs/stakeholder/screenshots/20-finops-cost-by-team.png)
+
 ### Licensing & TCO
 A multi-year estimate with the formula shown, using a fictional vendor and fictional prices.
 
@@ -358,7 +369,7 @@ an onboarding pack and a practice incident.
 ## 5. Implementation
 
 Code: [`core/`](core/) + one package per use case in [`use-cases/`](use-cases/) · Python 3.11+ ·
-standard library only · 128 automated tests · each package builds as an installable wheel. Four use
+standard library only · 156 automated tests · each package builds as an installable wheel. Five use
 cases are implemented, in priority order:
 
 | # | Use case | Status | What it proves |
@@ -367,8 +378,9 @@ cases are implemented, in priority order:
 | 2 | Knowledge & runbooks | Implemented | The same platform stops incidents repeating: stale runbooks fixed, follow-ups chased |
 | 3 | Architecture & ADLC | Implemented | A requirement document becomes a reviewed design: options scored against NFRs in code, an ADR, stories and a diagram, with no invented figures |
 | 4 | Change risk | Implemented | Risky changes are caught before release, with every point of the score traceable and a two-person gate the agent cannot bypass |
+| 5 | FinOps | Implemented | Cost anomalies are flagged with a likely cause while they can still be stopped, and savings are estimated by formula and then measured from the bill, never mixed |
 
-All four share the same building blocks: read-only sources, evidence numbered in code, a deterministic
+All five share the same building blocks: read-only sources, evidence numbered in code, a deterministic
 first pass, one structured model call with no tools, validation in code, policy-set approvals, an
 append-only audit log and an evaluation against held-out labels.
 
@@ -678,7 +690,96 @@ Reports: [`change-risk-CHG0030601.md`](use-cases/change-risk/reports/change-risk
 
 ![Use case 4: change risk assessment](docs/stakeholder/screenshots/19-change-risk-assessment.png)
 
-### 5.5 Code structure and configuration
+### 5.5 Use case 5 — FinOps
+
+**Why fifth.** Use cases 1–4 protect reliability; this one brings in the cost of running the same
+services, still at zero risk: it reads the cost export and drafts recommendations, and the owning
+team decides each one. It reuses:
+- ServiceNow change requests, through the read-only connector, to explain a cost jump;
+- the service catalogue, to allocate cost tagged with a service but not a team;
+- the evidence, validation, audit and evaluation pattern.
+
+It adds three sources most organisations already have: the cloud provider's cost export
+(FOCUS-style columns), utilisation metrics, and the cloud configuration change log. It is the
+prototype's FinOps screen, now working code.
+
+```mermaid
+flowchart LR
+    A[Read-only sources<br/>cost export · utilisation<br/>config change log · savings register<br/>ServiceNow changes · catalogue] --> B[Allocate + spend by team<br/>forecast from run-rate]
+    A --> C[Anomalies in code<br/>z ≥ 3 vs 6-month baseline<br/>and ≥ $1,000 and ≥ 10%]
+    C --> D[Likely cause in code<br/>config change that fits the category<br/>points → confidence]
+    B --> E[Recommendations in code<br/>formula per estimate]
+    D --> E
+    E --> F[Realised savings<br/>measured from the bill]
+    B --> G[Model: summary,<br/>explanations, notes]
+    D --> G
+    E --> G
+    G --> H[Validation in code<br/>no invented figures<br/>no claimed actions]
+    H --> I[Report + owning-team decisions<br/>estimated and realised kept apart]
+    I --> J[(Audit log)]
+```
+
+1. **Read.** The monthly cost export, net of credits; 30-day utilisation per resource; the cloud
+   configuration change log; the savings register of past decisions; ServiceNow change requests;
+   the service catalogue. Configuration notes and change titles are cleaned: secrets redacted,
+   instruction-like text flagged.
+2. **Allocate and forecast (code).** A cost line belongs to its `team` tag, else to the catalogue
+   owner of its `service` tag, else it is **unallocated** and reported. The current month is
+   partial, so its forecast is month to date × days in month ÷ days covered.
+3. **Flag anomalies (code).** Per resource and line item, on usage only. A month is flagged when it
+   is at least 3 standard deviations above the mean of the previous 6 months **and** the increase is
+   at least $1,000 **and** at least 10%. The floors stop small, quiet series and steady growth from
+   being flagged. Flagged months leave later baselines, so a cost that stays high is not absorbed
+   into "normal".
+4. **Find the likely cause (code).** A configuration change in the window whose attribute fits the
+   cost category (retention for storage, log level for logging). Points: fits the category +2,
+   same resource or service +1, made under a change request +1. High from 4, medium 2–3, low 1;
+   with nothing found, "not established".
+5. **Recommend (code).** One per resource, first rule wins: review the configuration change behind
+   an anomaly, delete an idle volume, schedule a non-production resource, or rightsize. Each shows
+   its formula. A recommendation rejected in the last 180 days is suppressed, with the team's reason.
+6. **Measure realised savings (code).** For implemented recommendations: mean cost over the 3
+   complete months before, minus the mean over the complete months since. Nobody types it in, and
+   it waits for one complete month.
+7. **Draft (model).** A summary, one explanation per anomaly and one note per open recommendation.
+   The model never changes a figure, cause, confidence or status.
+8. **Validate (code).** Rejects text about an unknown or closed item, with no valid evidence, with a
+   figure not in the evidence, or claiming that something was changed.
+9. **Decide (code, governance).**
+   - Only the owning team decides (`service-owner` or `engineering-lead`), with a written reason.
+     A FinOps analyst proposes but cannot approve alone; an agent never can.
+   - Approval freezes the estimate, so the realised saving is compared with what the team agreed to.
+   - Only an approved recommendation can be recorded as implemented. Nothing here changes a cloud
+     resource.
+
+**Result (synthetic cost export, mock provider):**
+- **Spend:** $122,585 in October, 7% up on September. November's forecast is $131,748, a run-rate
+  from 16 of 30 days. 2% ($3,000) is unallocated: a NAT gateway with no tags.
+- **AN-1, snapshot storage on `loyalty-ledger-db`:** $23,030 in October against a 6-month mean of
+  $17,317 (+33%, z = 16.5), and still rising in November. The likely cause, at **high** confidence,
+  is CFG-0101: backup retention went from 30 to 365 days under CHG0030560, an audit request.
+- **AN-2, log analytics:** November's run-rate is $11,034 against $5,998 (+84%, z = 42.0). The likely
+  cause, at **medium** confidence, is CFG-0103: a DEBUG log level set on `notification-worker` with no
+  change request. The text in that entry that tries to give the AI instructions is flagged and
+  ignored. Reported as not established: who approved the change, and whether `notification-worker`
+  is the source, because the export has no breakdown below the logging resource.
+- **Not flagged, on purpose:** 1.5% monthly growth on order nodes; an August bump on partner egress
+  with z = 4.0 but only $586 (9.7%); a September SLA credit.
+- **Recommendations:** 5 open, estimated at **$18,086** a month. The sandbox schedule approved in
+  July was estimated at $3,065 a month; **$2,680** a month was measured from the bill (May–July vs
+  August–October). A rightsizing the Membership team rejected in September is suppressed until March.
+- **Evaluation:** anomaly precision and recall 100% over 98 series-months, both causes and confidence
+  levels correct, realised saving within 0.7% of the label, 0 rejected drafts, 0 invented figures,
+  0 changes to cloud resources. The data and labels were written together, so this proves the
+  pipeline, not the thresholds.
+
+Reports: [`finops-report.md`](use-cases/finops/reports/finops-report.md) · page
+[`finops-report.html`](use-cases/finops/reports/finops-report.html) ·
+[`evaluation-mock.md`](use-cases/finops/reports/evaluation-mock.md).
+
+![Use case 5: FinOps, cloud cost by team](docs/stakeholder/screenshots/20-finops-cost-by-team.png)
+
+### 5.6 Code structure and configuration
 
 The code is one platform core plus one folder per use case. Details, and how to add a use case:
 [`core/README.md`](core/README.md).
@@ -693,6 +794,7 @@ use-cases/
   knowledge-runbooks/        ecc-knowledge     (same layout)
   architecture-adlc/         ecc-architecture  (same layout)
   change-risk/               ecc-change        (same layout)
+  finops/                    ecc-finops        (same layout)
 shared-data/                 data read by more than one use case (runbooks, service catalogue, ServiceNow fixtures)
 scripts/                     synthetic data generator, README screenshots
 ```
@@ -711,7 +813,7 @@ scripts/                     synthetic data generator, README screenshots
   installed is reported by `ecc config validate`, never silently replaced by a default. Approval
   and risk rules stay in code, because they are governance.
 
-### 5.6 What is built, and what is not yet
+### 5.7 What is built, and what is not yet
 
 | Area | Built | Not yet |
 |------|-------|---------|
@@ -720,17 +822,18 @@ scripts/                     synthetic data generator, README screenshots
 | Use case 2 | 7 checks, repeat clusters, overdue actions, recommendations, drafted edits with validation, per-team review queue, feedback, evaluation | Publishing approved edits back to the wiki (deliberately not built), reading the wiki's revision history |
 | Use case 3 | Requirement document intake with quote and figure checks, option-by-NFR assessment, ranking, ADR conflicts, open questions, drafted ADR and stories with validation, NFR traceability, Mermaid container diagram, proposal pack as Markdown and an HTML page, approver feedback, evaluation | Reading Word or PDF directly (export to Markdown first), diagrams for options other than the preferred one, cost estimates (left to Licensing & TCO), writing approved ADRs and stories to the repository or Jira (deliberately not built) |
 | Use case 4 | 11 risk factors with evidence, configurable weights and bands, similar past changes without look-ahead, drafted conditions with validation, two-person release gate tied to the assessment, Markdown and HTML report, backtest | Real Git host and CI adapters, load-test and runtime signals (the backtest's miss), a pipeline check that reads the gate |
+| Use case 5 | Allocation by tag and catalogue, spend by team with run-rate forecast, z-score anomalies with floors, likely cause with points-based confidence, 4 recommendation rules with formulas, savings register, owning-team decisions, realised savings measured from the bill, drafted explanations and notes with validation, Markdown and HTML report with chart, evaluation | Real cloud cost export and metrics adapters, daily granularity, a breakdown below the resource (e.g. log volume per service), checking an approver belongs to the owning team, amortised commitments (reservations, savings plans) |
 | Platform | Core package, plugin contract, one `ecc` CLI, product configuration with strict validation and environment overrides, a package per use case | Per-environment configuration files, secrets from a vault, a service deployment |
-| Model | Mock (default) and one Claude Opus 5.5 client in core, used by every use case; request shape tested offline | A paid run with Claude. Commands are ready: `ecc incident replay --provider claude`, `ecc knowledge evaluate --provider claude`, `ecc architecture evaluate --provider claude`, `ecc change assess --provider claude` |
+| Model | Mock (default) and one Claude Opus 5.5 client in core, used by every use case; request shape tested offline | A paid run with Claude. Commands are ready: `ecc incident replay --provider claude`, `ecc knowledge evaluate --provider claude`, `ecc architecture evaluate --provider claude`, `ecc change assess --provider claude`, `ecc finops analyse --provider claude` |
 | Governance | Policy-set risk and approval, append-only audit, secret redaction, injection flagging | Approval workflow and UI from the prototype; tamper-evident audit storage |
-| Quality | 128 tests (36 core, 27 + 13 + 35 + 17 per use case), compile check, a test that use cases never import each other, every package built and installed in a clean virtualenv | CI pipeline |
+| Quality | 156 tests (36 core, 27 + 13 + 35 + 17 + 28 per use case), compile check, a test that use cases never import each other, the first four packages built and installed in a clean virtualenv | CI pipeline; a wheel build of `ecc-finops` (the local Python lacks the `wheel` package) |
 
-### 5.7 Build, test and run
+### 5.8 Build, test and run
 
 Python 3.11 or newer; nothing to install for the mock provider. Run from the repository root.
 
 ```bash
-python -m pytest                                   # 128 tests across core and the four use cases, no network
+python -m pytest                                   # 156 tests across core and the five use cases, no network
 python ecc.py use-cases                            # what is enabled
 python ecc.py config validate                      # check config/product.toml and every data path
 
@@ -763,8 +866,15 @@ python ecc.py change approve CHG0030601 --by priya.sre --role sre-lead     # hig
 python ecc.py change status
 python ecc.py change backtest                      # past changes scored as of their start vs what followed
 
+# Use case 5: FinOps
+python ecc.py finops analyse                       # spend by team, anomalies, savings -> runs/finops/report.html
+python ecc.py finops decide REC-RS-promotion-engine-nodes --by lee.lead --role engineering-lead --note "CPU is low outside the peak"
+python ecc.py finops implemented REC-RS-promotion-engine-nodes --by lee.lead --on 2026-11-12
+python ecc.py finops status
+python ecc.py finops evaluate                      # anomalies, causes and savings vs labels
+
 # Install as packages (optional): then `ecc ...` replaces `python ecc.py ...`
-pip install -e core -e use-cases/incident-investigation -e use-cases/knowledge-runbooks -e use-cases/architecture-adlc -e use-cases/change-risk
+pip install -e core -e use-cases/incident-investigation -e use-cases/knowledge-runbooks -e use-cases/architecture-adlc -e use-cases/change-risk -e use-cases/finops
 
 # With Claude (costs money; needs ANTHROPIC_API_KEY or an `ant auth login` profile)
 pip install -e "core[claude]"
@@ -772,6 +882,7 @@ python ecc.py incident replay --provider claude    # or set provider = "claude" 
 python ecc.py knowledge evaluate --provider claude
 python ecc.py architecture evaluate --provider claude
 python ecc.py change assess --provider claude
+python ecc.py finops analyse --provider claude
 ```
 
 ---
@@ -865,7 +976,24 @@ python ecc.py change assess --provider claude
 | Past runbook state | Unknown when the only validation date is later than the change | Use today's validation date | Using a later date would leak the future into the backtest |
 | Gate output | Records the decision and re-renders the report; does not touch the pipeline | Block deploys directly | Zero risk during the pilot; a pipeline check reading the gate state is the next step |
 
-### 6.6 Decisions made while building
+### 6.6 Use case 5 — FinOps
+
+| Decision | Chosen | Alternative considered | Why |
+|----------|--------|------------------------|-----|
+| Who flags anomalies | A z-score against a trailing 6-month baseline, plus a dollar and a percent floor, in code | A model or a forecasting library | Explainable in one line, free, and testable; the floors handle the two classic false alarms (flat series, steady growth) |
+| Baseline after an anomaly | Flagged months leave later baselines | Rolling baseline over everything | Otherwise a cost that stays high becomes "normal" after a few months and is never questioned |
+| Credits | Excluded from the usage baseline; included in reported spend | Net everything | A one-off credit would widen the deviation and hide a real jump the month after |
+| Likely cause | A configuration change that fits the cost category, scored with visible points | Ask the model for the cause | The cause and its confidence must be checkable; the model explains, it does not pick |
+| Partial month | Run-rate forecast, marked provisional, and never the basis of an estimate when a complete month exists | Wait for month end | Catching a doubling log bill two weeks early is the point of FinOps; "provisional" keeps it honest |
+| Estimated vs realised | Estimates from shown formulas, frozen at approval; realised measured from the bill after a complete month; never added together | One "savings" column updated by hand | Finance can trace every estimate, and nobody can claim a saving the bill doesn't show |
+| Realised method | Mean of 3 months before vs months after, on the same resource | Compare with the estimate's own formula | Measures what the bill did; it is gross of other changes, and the report says so |
+| Who decides | The owning team (`service-owner`, `engineering-lead`), with a written reason; not FinOps alone, never an agent | FinOps approves | The team that owns the resource carries the risk of changing it |
+| Rejected recommendations | Suppressed for 180 days with the team's reason | Propose again every month | Repeating a rejected idea teaches teams to ignore the report |
+| Unallocated spend | Reported as its own row and KPI, with the resources named | Spread across teams by share | Spreading hides the tagging gap that causes it |
+| Output | Report and decisions only; no write to the cloud or a ticketing system | Open tickets or apply schedules automatically | Zero risk during the pilot; ticket creation is the natural next step |
+| Chart | Stacked monthly columns by team, fixed colour per team, forecast faded and outlined, table view under it | A line per team | The question is "how much, and who": totals and composition per month; the table carries exact values |
+
+### 6.7 Decisions made while building
 
 | Situation | Decision | Why |
 |-----------|----------|-----|
@@ -885,6 +1013,10 @@ python ecc.py change assess --provider claude
 | A test drafted "Canary 10%" and it passed the figures check, because "10" appears in the evidence as "10:00" | Kept; documented that the check is per number, not per meaning | It catches invented numbers, not misused ones. Meaning-level checks would need the model or a grammar; a known limit |
 | The change-risk backtest reports FAIL (3 of 4) | Left as is, with the miss explained in the report | Tuning the synthetic data or the gate until it passes would make the backtest meaningless |
 | Mock results looked perfect (8/8, 9/9, 44/44) | Stated plainly in the README and in every generated report | The synthetic data was written alongside the rules; perfect scores prove the plumbing, not accuracy |
+| The FinOps likely cause needed change requests, and the shared ServiceNow fixture had none for cost | Added two change records on new configuration items (`loyalty-ledger-db`, `platform-sandbox-cluster`), then ran every use case's tests | The other use cases read changes by their own change sets or an incident's configuration item, so nothing else moved |
+| Validation rejected the FinOps mock's rightsizing note: it quoted the 25% CPU threshold, which no evidence record stated | Each recommendation now cites the rule it applied as evidence | The check was right: a threshold the reader can't trace is an unsupported figure. Found on the first run |
+| A z-score alone flagged a $586 (9.7%) bump in data transfer (z = 4.0) | Two floors: at least $1,000 and at least 10% | A flat series has a tiny deviation, so small noise looks extreme; finance doesn't act on a few hundred dollars |
+| The chart palette validator needs Node.js, which isn't installed | Used the reference palette's first four slots, documented as passing in light and dark, with grey for unallocated | Teams keep fixed colours; the table view under the chart carries every number for anyone who can't tell them apart |
 
 ---
 

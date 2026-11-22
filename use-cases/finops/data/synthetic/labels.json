@@ -1,0 +1,49 @@
+{
+  "_meta": {
+    "author": "Pradeep Sahoo",
+    "generated_by": "scripts/generate_synthetic_data.py",
+    "synthetic": true
+  },
+  "anomalies": [
+    {
+      "resource": "loyalty-ledger-db",
+      "line_item": "Database snapshots",
+      "months": [
+        "2026-10",
+        "2026-11"
+      ],
+      "cause_config": "CFG-0101",
+      "cause_change": "CHG0030560",
+      "confidence": "high"
+    },
+    {
+      "resource": "platform-logging",
+      "line_item": "Log analytics",
+      "months": [
+        "2026-11"
+      ],
+      "cause_config": "CFG-0103",
+      "cause_change": null,
+      "confidence": "medium"
+    }
+  ],
+  "recommendations": [
+    "REC-IDLE-membership-orphan-volumes",
+    "REC-REV-loyalty-ledger-db",
+    "REC-REV-notification-worker",
+    "REC-RS-promotion-engine-nodes",
+    "REC-SCH-commerce-staging-nodes"
+  ],
+  "suppressed": [
+    "REC-RS-membership-api-nodes"
+  ],
+  "realised": {
+    "REC-SCH-platform-sandbox-cluster": {
+      "expected_monthly_usd": 2700,
+      "tolerance": 0.1
+    }
+  },
+  "unallocated_resources": [
+    "shared-nat-gateway"
+  ]
+}

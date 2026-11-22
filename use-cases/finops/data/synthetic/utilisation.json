@@ -1,0 +1,45 @@
+{
+  "_meta": {
+    "author": "Pradeep Sahoo",
+    "generated_by": "scripts/generate_synthetic_data.py",
+    "synthetic": true,
+    "window_days": 30,
+    "to": "2026-11-16"
+  },
+  "resources": {
+    "order-service-nodes": {
+      "cpu_p95_pct": 61,
+      "mem_p95_pct": 72,
+      "hours_per_week": 168
+    },
+    "commerce-staging-nodes": {
+      "cpu_p95_pct": 12,
+      "mem_p95_pct": 30,
+      "hours_per_week": 168
+    },
+    "promotion-engine-nodes": {
+      "cpu_p95_pct": 18,
+      "mem_p95_pct": 31,
+      "hours_per_week": 168
+    },
+    "membership-api-nodes": {
+      "cpu_p95_pct": 22,
+      "mem_p95_pct": 35,
+      "hours_per_week": 168
+    },
+    "platform-sandbox-cluster": {
+      "cpu_p95_pct": 40,
+      "mem_p95_pct": 45,
+      "hours_per_week": 65
+    },
+    "notification-worker-nodes": {
+      "cpu_p95_pct": 45,
+      "mem_p95_pct": 52,
+      "hours_per_week": 168
+    },
+    "membership-orphan-volumes": {
+      "attached": false,
+      "days_unattached": 70
+    }
+  }
+}

@@ -61,6 +61,28 @@
       "close_code": "Successful"
     },
     {
+      "number": "CHG0030470",
+      "cmdb_ci": "platform-sandbox-cluster",
+      "type": "Normal",
+      "state": "Closed",
+      "short_description": "Stop platform sandbox cluster outside 07:00-20:00 on weekdays",
+      "start_date": "2026-08-01 06:00:00",
+      "end_date": "2026-08-01 06:20:00",
+      "requested_by": "noor.lead",
+      "close_code": "Successful"
+    },
+    {
+      "number": "CHG0030560",
+      "cmdb_ci": "loyalty-ledger-db",
+      "type": "Normal",
+      "state": "Closed",
+      "short_description": "Increase loyalty-ledger-db snapshot retention to 365 days (audit request AUD-77)",
+      "start_date": "2026-10-02 08:00:00",
+      "end_date": "2026-10-02 08:20:00",
+      "requested_by": "dana.dev",
+      "close_code": "Successful"
+    },
+    {
       "number": "CHG0030530",
       "cmdb_ci": "order-service",
       "type": "Normal",

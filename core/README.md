@@ -32,6 +32,7 @@ use-cases/
   knowledge-runbooks/          ecc-knowledge    · use case 2
   architecture-adlc/           ecc-architecture · use case 3
   change-risk/                 ecc-change       · use case 4
+  finops/                      ecc-finops       · use case 5
     README.md                  what it does, commands, settings, code map
     pyproject.toml             depends on ecc-core only
     src/ecc_<name>/            the package; __init__.py declares USE_CASE
@@ -60,6 +61,7 @@ python ecc.py incident replay
 python ecc.py knowledge evaluate
 python ecc.py architecture run --requirement-doc use-cases/architecture-adlc/data/synthetic/requirement-document.md
 python ecc.py change assess
+python ecc.py finops analyse
 python -m pytest                             # every package's tests, no network
 ```
 
@@ -68,7 +70,7 @@ Each use case's README lists its commands.
 **Install as packages** (optional), then use `ecc` instead of `python ecc.py`:
 
 ```bash
-pip install -e core -e use-cases/incident-investigation -e use-cases/knowledge-runbooks -e use-cases/architecture-adlc -e use-cases/change-risk
+pip install -e core -e use-cases/incident-investigation -e use-cases/knowledge-runbooks -e use-cases/architecture-adlc -e use-cases/change-risk -e use-cases/finops
 pip install -e "core[claude]"                # only for provider = "claude"
 ```
 
@@ -145,5 +147,5 @@ zone is UTC. Credentials never go in the configuration file.
 ## Adding a real data source
 
 Each use case reads its data through a read-only interface (`IncidentSource`, `KnowledgeBase.load`,
-`ArchitectureInputs.load`). Implement it for the real tool with read-only credentials and point the
+`ArchitectureInputs.load`, `FinOpsInputs.load`). Implement it for the real tool with read-only credentials and point the
 configuration at it. Keep every method a read.

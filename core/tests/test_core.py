@@ -82,9 +82,9 @@ def _copy_config(tmp_path, edit=None) -> Path:
 def test_product_config_loads_and_every_use_case_validates():
     config = load_config(CONFIG)
     assert config.provider == "mock" and config.model.model == "claude-opus-5-5"
-    assert [u.key for u in config.enabled()] == ["incident", "knowledge", "architecture", "change"]
+    assert [u.key for u in config.enabled()] == ["incident", "knowledge", "architecture", "change", "finops"]
     contexts = load_enabled(config, check_paths=True)            # every configured path exists
-    assert {c.use_case.key for c in contexts} == {"incident", "knowledge", "architecture", "change"}
+    assert {c.use_case.key for c in contexts} == {"incident", "knowledge", "architecture", "change", "finops"}
     assert config.sources["runbooks"].exists()
 
 
@@ -166,7 +166,7 @@ def test_bad_config_is_reported_not_raised(tmp_path, capsys):
 def test_use_cases_do_not_import_each_other():
     """Each use case depends on ecc_core only."""
     packages = {"ecc_incident": "incident-investigation", "ecc_knowledge": "knowledge-runbooks",
-                "ecc_architecture": "architecture-adlc", "ecc_change": "change-risk"}
+                "ecc_architecture": "architecture-adlc", "ecc_change": "change-risk", "ecc_finops": "finops"}
     for pkg, folder in packages.items():
         for f in (REPO / "use-cases" / folder / "src" / pkg).rglob("*.py"):
             text = f.read_text(encoding="utf-8")
