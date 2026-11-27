@@ -28,12 +28,36 @@
     }
   ],
   "recommendations": [
+    "REC-CMT-order-service-nodes",
     "REC-IDLE-membership-orphan-volumes",
     "REC-REV-loyalty-ledger-db",
     "REC-REV-notification-worker",
+    "REC-RNW-RI-membership-db",
     "REC-RS-promotion-engine-nodes",
     "REC-SCH-commerce-staging-nodes"
   ],
+  "daily": [
+    {
+      "resource": "loyalty-ledger-db",
+      "line_item": "Database snapshots",
+      "onset": "2026-10-03"
+    },
+    {
+      "resource": "platform-logging",
+      "line_item": "Log analytics",
+      "onset": "2026-11-04"
+    }
+  ],
+  "commitments": {
+    "RI-membership-db": {
+      "underused": true,
+      "expiring": true
+    },
+    "RI-order-service-db": {
+      "underused": false,
+      "expiring": false
+    }
+  },
   "suppressed": [
     "REC-RS-membership-api-nodes"
   ],
@@ -56,6 +80,10 @@
     }
   },
   "unallocated_resources": [
+    "dev-test-vm-7",
+    "loyalty-cache",
+    "membership-api-alb",
+    "search-indexer-nodes",
     "shared-nat-gateway"
   ]
 }

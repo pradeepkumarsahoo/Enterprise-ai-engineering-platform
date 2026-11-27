@@ -7,11 +7,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass, fields
 
-RULES_VERSION = "finops rules v1.0"
+RULES_VERSION = "finops rules v1.1"
 
 
 @dataclass(frozen=True)
 class Rules:
+    cost_export_file: str = "cost_export.csv"   # in finops_dir
+    cost_export_format: str = "auto"          # auto (from the header) | focus | aws-cur | azure
     baseline_months: int = 6                  # trailing months the mean and deviation come from
     min_baseline_months: int = 4              # fewer usable months than this: the month is not judged
     z_threshold: float = 3.0
@@ -28,6 +30,20 @@ class Rules:
     idle_days: int = 30
     realised_baseline_months: int = 3         # complete months before implementation, for realised savings
     rejected_cooldown_days: int = 180         # a rejected recommendation is not proposed again for this long
+    daily_baseline_days: int = 28             # daily rule: trailing days the mean and deviation come from
+    daily_min_baseline_days: int = 14
+    daily_z_threshold: float = 3.0
+    daily_min_increase_usd: float = 100.0     # about $3,000 a month
+    daily_min_increase_ratio: float = 0.20    # above the month-length effect (a 28-day month is +11% a day)
+    daily_confirm_days: int = 2               # consecutive flagged days before an alert is raised
+    commitment_utilisation_min: float = 0.90  # below this, a commitment is underused
+    commitment_renewal_days: int = 60         # a commitment expiring this soon needs a renewal decision
+    commit_min_monthly_usd: float = 5000.0    # steady on-demand compute at least this much a month
+    commit_min_months: int = 6                # complete months of history before a commitment is proposed
+    commit_discount_ratio: float = 0.28       # 1-year no-upfront compute savings plan vs on-demand (price sheet)
+    shared_split: str = "proportional"        # dashboard default: none | even | proportional | fixed
+    shared_split_fixed: str = ""              # "Commerce:40,Loyalty:30,..." for fixed
+    unallocated_as_shared: bool = False       # dashboard default: split unallocated cost like shared cost
     as_of: str = "2026-11-17"                 # "now" for the synthetic data; production passes today's date
 
     @classmethod

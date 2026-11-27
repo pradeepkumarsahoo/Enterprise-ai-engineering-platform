@@ -25,8 +25,11 @@ shared [`core/`](core/), configured by [`config/product.toml`](config/product.to
    and stories, NFR traceability and a container diagram.
 4. **Change risk:** a pre-deploy risk score from rules, similar past changes, release conditions and a
    two-person release gate.
-5. **FinOps:** monthly spend by team, statistically flagged anomalies with their likely cause, and
-   recommendations with estimated and realised savings in separate columns.
+5. **FinOps:** amortised spend by team from a FOCUS, AWS or Azure cost export, statistically flagged
+   anomalies with their likely cause, daily alerts within days of a jump, reservations and savings
+   plans, and recommendations with estimated and realised savings in separate columns. A tagging
+   agent checks every cloud resource and proposes tag fixes for the owning team to approve, and a
+   customisable dashboard shows the cost of each team.
 
 See [section 5](#5-implementation) for what is built and
 [section 6](#6-decisions-and-trade-offs-made-during-development) for the decisions behind it.
@@ -369,7 +372,7 @@ an onboarding pack and a practice incident.
 ## 5. Implementation
 
 Code: [`core/`](core/) + one package per use case in [`use-cases/`](use-cases/) · Python 3.11+ ·
-standard library only · 160 automated tests · each package builds as an installable wheel. Five use
+standard library only · 186 automated tests · each package builds as an installable wheel. Five use
 cases are implemented, in priority order:
 
 | # | Use case | Status | What it proves |
@@ -699,14 +702,20 @@ team decides each one. It reuses:
 - the service catalogue, to allocate cost tagged with a service but not a team;
 - the evidence, validation, audit and evaluation pattern.
 
-It adds three sources most organisations already have: the cloud provider's cost export
-(FOCUS-style columns), utilisation metrics, and the cloud configuration change log. It is the
-prototype's FinOps screen, now working code.
+It adds sources most organisations already have: the cloud provider's cost export (FOCUS, AWS CUR
+2.0 or Azure cost details, detected from the header), utilisation metrics, the cloud configuration
+change log, and the reservations and savings plans inventory. It also adds a shared team directory,
+so a decision is accepted only from the team that owns the resource. It is the prototype's FinOps
+screen, now working code.
 
 ```mermaid
 flowchart LR
-    A[Read-only sources<br/>cost export · utilisation<br/>config change log · savings register<br/>ServiceNow changes · catalogue] --> B[Allocate + spend by team<br/>forecast from run-rate]
+    A[Read-only sources<br/>cost export: FOCUS · AWS CUR · Azure<br/>utilisation · config change log<br/>savings register · commitments<br/>ServiceNow changes · catalogue] --> B[Allocate + amortised spend by team<br/>forecast from run-rate]
     A --> C[Anomalies in code<br/>z ≥ 3 vs 6-month baseline<br/>and ≥ $1,000 and ≥ 10%]
+    A --> K[Daily alerts in code<br/>step change, 2 days running]
+    K --> C
+    A --> L[Commitments in code<br/>utilisation · expiry]
+    L --> E
     C --> D[Likely cause in code<br/>config change that fits the category<br/>points → confidence]
     B --> E[Recommendations in code<br/>formula per estimate]
     D --> E
@@ -715,29 +724,39 @@ flowchart LR
     D --> G
     E --> G
     G --> H[Validation in code<br/>no invented figures<br/>no claimed actions]
-    H --> I[Report + owning-team decisions<br/>estimated and realised kept apart]
+    H --> I[Report + owning-team decisions<br/>checked against the team directory<br/>estimated and realised kept apart]
     I --> J[(Audit log)]
 ```
 
-1. **Read.** The monthly cost export, net of credits; 30-day utilisation per resource; the cloud
-   configuration change log; the savings register of past decisions; ServiceNow change requests;
-   the service catalogue. Configuration notes and change titles are cleaned: secrets redacted,
-   instruction-like text flagged.
+1. **Read.** The cost export in FOCUS, AWS CUR 2.0 or Azure cost-details format, normalised into
+   one shape with billed and effective (amortised) cost kept apart; 30-day utilisation per resource;
+   the cloud configuration change log; the savings register of past decisions; the reservations and
+   savings plans inventory; ServiceNow change requests; the service catalogue; the team directory.
+   Configuration notes and change titles are cleaned: secrets redacted, instruction-like text flagged.
+   A row that cannot be read is skipped and reported.
 2. **Allocate and forecast (code).** A cost line belongs to its `team` tag, else to the catalogue
-   owner of its `service` tag, else it is **unallocated** and reported. The current month is
-   partial, so its forecast is month to date × days in month ÷ days covered.
+   owner of its `service` tag, else it is **unallocated** and reported. Spend is amortised: an
+   upfront reservation is spread over the usage it covers instead of landing as a spike in the
+   month it was paid; the billed total is shown beside it, to reconcile with the invoice. The
+   current month is partial, so its forecast is month to date × days in month ÷ days covered.
 3. **Flag anomalies (code).** Per resource and line item, on usage only. A month is flagged when it
    is at least 3 standard deviations above the mean of the previous 6 months **and** the increase is
    at least $1,000 **and** at least 10%. The floors stop small, quiet series and steady growth from
    being flagged. Flagged months leave later baselines, so a cost that stays high is not absorbed
    into "normal".
+   **Daily alerts (code).** From a daily export, a day at least 3 standard deviations above the
+   previous 28 days, and at least $100 and 20% up, flagged 2 days running, raises an alert. This is
+   for speed; the monthly rule above is for persistence and savings. An alert links to the monthly
+   anomaly on the same series, or is reported as an early signal.
 4. **Find the likely cause (code).** A configuration change in the window whose attribute fits the
    cost category (retention for storage, log level for logging). Points: fits the category +2,
    same resource or service +1, made under a change request +1. High from 4, medium 2–3, low 1;
    with nothing found, "not established".
 5. **Recommend (code).** One per resource, first rule wins: review the configuration change behind
-   an anomaly, delete an idle volume, schedule a non-production resource, or rightsize. Each shows
-   its formula. A recommendation rejected in the last 180 days is suppressed, with the team's reason.
+   an anomaly, delete an idle volume, schedule a non-production resource, rightsize, renew an
+   underused commitment that ends within 60 days at a smaller size, or cover steady on-demand
+   production compute with a 1-year savings plan. Each shows its formula. A recommendation rejected
+   in the last 180 days is suppressed, with the team's reason.
 6. **Measure realised savings (code).** For implemented recommendations: mean cost over the 3
    complete months before, minus the mean over the complete months since. Nobody types it in, and
    it waits for one complete month.
@@ -746,15 +765,19 @@ flowchart LR
 8. **Validate (code).** Rejects text about an unknown or closed item, with no valid evidence, with a
    figure not in the evidence, or claiming that something was changed.
 9. **Decide (code, governance).**
-   - Only the owning team decides (`service-owner` or `engineering-lead`), with a written reason.
-     A FinOps analyst proposes but cannot approve alone; an agent never can.
+   - Only the owning team decides, with a written reason: the person must be an active member of
+     that team in the team directory, as `service-owner` or `engineering-lead`. A role typed on the
+     command line must match the directory. A FinOps analyst proposes but cannot approve alone; a
+     leaver cannot decide; an agent never can. The same check applies to recording an implementation.
    - Approval freezes the estimate, so the realised saving is compared with what the team agreed to.
    - Only an approved recommendation can be recorded as implemented. Nothing here changes a cloud
      resource.
 
 **Result (synthetic cost export, mock provider):**
-- **Spend:** $122,585 in October, 7% up on September. November's forecast is $131,748, a run-rate
-  from 16 of 30 days. 2% ($3,000) is unallocated: a NAT gateway with no tags.
+- **Spend (amortised):** $125,002 in October, 7% up on September. November's forecast is $134,013,
+  a run-rate from 16 of 30 days. 8% ($10,332) is unallocated: five resources with no valid team tag,
+  including a cache tagged `Team=loyalty`, which is no longer reported as a separate team. March was billed
+  $72,000 more than its amortised spend: an all-upfront database reservation, now spread over its year.
 - **AN-1, snapshot storage on `loyalty-ledger-db`:** $23,030 in October against a 6-month mean of
   $17,317 (+33%, z = 16.5), and still rising in November. The likely cause, at **high** confidence,
   is CFG-0101: backup retention went from 30 to 365 days under CHG0030560, an audit request.
@@ -763,14 +786,25 @@ flowchart LR
   change request. The text in that entry that tries to give the AI instructions is flagged and
   ignored. Reported as not established: who approved the change, and whether `notification-worker`
   is the source, because the export has no breakdown below the logging resource.
+- **Daily alerts:** the snapshot step started on 3 October and was alerted on 4 October; the log
+  step started on 4 November and was alerted on 5 November. The monthly rule could only judge them
+  when the month closed (or, for November, from the part-month run-rate). No other daily alerts.
+- **Reservations:** `RI-membership-db` is 80% used and ends in 27 days, so a smaller renewal is
+  proposed ($1,019 a month). `RI-order-service-db` is fully used.
 - **Not flagged, on purpose:** 1.5% monthly growth on order nodes; an August bump on partner egress
   with z = 4.0 but only $586 (9.7%); a September SLA credit.
-- **Recommendations:** 5 open, estimated at **$18,086** a month. The sandbox schedule approved in
+- **Recommendations:** 7 open, estimated at **$25,632** a month, including $6,527 from a savings plan
+  on steady order-service compute. The sandbox schedule approved in
   July was estimated at $3,065 a month; **$2,680** a month was measured from the bill (May–July vs
   August–October). A rightsizing the Membership team rejected in September is suppressed until March.
-- **Evaluation:** anomaly precision and recall 100% over 98 series-months, both causes and confidence
-  levels correct, realised saving within 0.7% of the label, 0 rejected drafts, 0 invented figures,
-  0 changes to cloud resources. The data and labels were written together, so this proves the
+- **Tagging agent:** 18 resources checked, 9 compliant, 8 proposals. 5 wait for the owning team
+  (for example `loyalty-cache`: `team=Loyalty`, `env=prod`, and remove `Team` and `Environment`);
+  3 have no team that can be established, so they wait for an owner and nobody can approve them.
+  Approving the proposals would allocate $6,603 of October's $10,332 unallocated cost.
+- **Evaluation:** anomaly precision and recall 100% over 133 series-months, both causes and confidence
+  levels correct, both daily alerts raised 1 day after their step and none elsewhere, commitments
+  flagged as labelled, realised saving within 0.7% of the label, 0 rejected drafts, 0 invented
+  figures, 0 changes to cloud resources. The data and labels were written together, so this proves the
   pipeline, not the thresholds.
 
 Reports: [`finops-report.md`](use-cases/finops/reports/finops-report.md) · page
@@ -795,7 +829,7 @@ use-cases/
   architecture-adlc/         ecc-architecture  (same layout)
   change-risk/               ecc-change        (same layout)
   finops/                    ecc-finops        (same layout)
-shared-data/                 data read by more than one use case (runbooks, service catalogue, ServiceNow fixtures)
+shared-data/                 data read by more than one use case (runbooks, service catalogue, team directory, ServiceNow fixtures)
 scripts/                     synthetic data generator, README screenshots
 ```
 
@@ -822,18 +856,18 @@ scripts/                     synthetic data generator, README screenshots
 | Use case 2 | 7 checks, repeat clusters, overdue actions, recommendations, drafted edits with validation, per-team review queue, feedback, evaluation | Publishing approved edits back to the wiki (deliberately not built), reading the wiki's revision history |
 | Use case 3 | Requirement document intake with quote and figure checks, option-by-NFR assessment, ranking, ADR conflicts, open questions, drafted ADR and stories with validation, NFR traceability, Mermaid container diagram, proposal pack as Markdown and an HTML page, approver feedback, evaluation | Reading Word or PDF directly (export to Markdown first), diagrams for options other than the preferred one, cost estimates (left to Licensing & TCO), writing approved ADRs and stories to the repository or Jira (deliberately not built) |
 | Use case 4 | 11 risk factors with evidence, configurable weights and bands, similar past changes without look-ahead, drafted conditions with validation, two-person release gate tied to the assessment, Markdown and HTML report, backtest | Real Git host and CI adapters, load-test and runtime signals (the backtest's miss), a pipeline check that reads the gate |
-| Use case 5 | Allocation by tag and catalogue, spend by team with run-rate forecast, z-score anomalies with floors, likely cause with points-based confidence, 4 recommendation rules with formulas, savings register, owning-team decisions, realised savings measured from the bill, drafted explanations and notes with validation, Markdown and HTML report with chart, evaluation | Real cloud cost export and metrics adapters, daily granularity, a breakdown below the resource (e.g. log volume per service), checking an approver belongs to the owning team, amortised commitments (reservations, savings plans) |
+| Use case 5 | Tagging agent over the whole inventory (inventory, AWS tagging API and Azure Resource Graph shapes) proposing fixes with scored confidence, owning-team approval, a tagging plan never run here; a customisable cost-by-team dashboard (views, basis, filters, shared-cost split, budgets, CSV, copy as configuration); cost export adapters for FOCUS, AWS CUR 2.0 and Azure cost details (format detected), billed and amortised cost kept apart, allocation by tag and catalogue, spend by team with run-rate forecast, z-score anomalies with floors, daily step-change alerts, likely cause with points-based confidence, reservations and savings plans (utilisation, expiry), 6 recommendation rules with formulas, savings register, decisions checked against the team directory, realised savings measured from the bill, drafted explanations and notes with validation, Markdown and HTML report with chart, evaluation | Reading the export from the cloud's storage bucket (files only today), a real metrics adapter, Azure billed cost (the amortised export has none; it needs the actual-cost export too), currencies other than USD, a breakdown below the resource (e.g. log volume per service), savings plan exchange and sharing across accounts |
 | Platform | Core package, plugin contract, one `ecc` CLI, product configuration with strict validation and environment overrides, a package per use case | Per-environment configuration files, secrets from a vault, a service deployment |
 | Model | Mock (default) and one Claude Opus 5.5 client in core, used by every use case; request shape tested offline | A paid run with Claude. Commands are ready: `ecc incident replay --provider claude`, `ecc knowledge evaluate --provider claude`, `ecc architecture evaluate --provider claude`, `ecc change assess --provider claude`, `ecc finops analyse --provider claude` |
 | Governance | Policy-set risk and approval, append-only audit, secret redaction, injection flagging | Approval workflow and UI from the prototype; tamper-evident audit storage |
-| Quality | 160 tests (39 core, 27 + 13 + 35 + 17 + 29 per use case), compile check, a test that use cases never import each other, the first four packages built and installed in a clean virtualenv | CI pipeline; a wheel build of `ecc-finops` (the local Python lacks the `wheel` package) |
+| Quality | 186 tests (39 core, 27 + 13 + 35 + 17 + 55 per use case), compile check, a test that use cases never import each other, the first four packages built and installed in a clean virtualenv | CI pipeline; a wheel build of `ecc-finops` (the local Python lacks the `wheel` package) |
 
 ### 5.8 Build, test and run
 
 Python 3.11 or newer; nothing to install for the mock provider. Run from the repository root.
 
 ```bash
-python -m pytest                                   # 160 tests across core and the five use cases, no network
+python -m pytest                                   # 186 tests across core and the five use cases, no network
 python ecc.py use-cases                            # what is enabled
 python ecc.py config validate                      # check config/product.toml and every data path
 
@@ -868,10 +902,14 @@ python ecc.py change backtest                      # past changes scored as of t
 
 # Use case 5: FinOps
 python ecc.py finops analyse                       # spend by team, anomalies, savings -> runs/finops/report.html
-python ecc.py finops decide REC-RS-promotion-engine-nodes --by lee.lead --role engineering-lead --note "CPU is low outside the peak"
+python ecc.py finops decide REC-RS-promotion-engine-nodes --by lee.lead --note "CPU is low outside the peak"   # Loyalty lead, from the team directory
 python ecc.py finops implemented REC-RS-promotion-engine-nodes --by lee.lead --on 2026-11-12
 python ecc.py finops status
 python ecc.py finops evaluate                      # anomalies, causes and savings vs labels
+python ecc.py finops tags check                    # tagging agent: every resource, proposed fixes (never applied)
+python ecc.py finops tags decide TAG-loyalty-cache --by dana.owner --note "Our cache"
+python ecc.py finops tags plan                     # approved changes as AWS/Azure commands, for the team to run
+python ecc.py finops dashboard                     # cost by team, customisable -> runs/finops/dashboard.html
 
 # Install as packages (optional): then `ecc ...` replaces `python ecc.py ...`
 pip install -e core -e use-cases/incident-investigation -e use-cases/knowledge-runbooks -e use-cases/architecture-adlc -e use-cases/change-risk -e use-cases/finops
@@ -988,6 +1026,14 @@ python ecc.py finops analyse --provider claude
 | Estimated vs realised | Estimates from shown formulas, frozen at approval; realised measured from the bill after a complete month; never added together | One "savings" column updated by hand | Finance can trace every estimate, and nobody can claim a saving the bill doesn't show |
 | Realised method | Mean of 3 months before vs months after, on the same resource | Compare with the estimate's own formula | Measures what the bill did; it is gross of other changes, and the report says so |
 | Who decides | The owning team (`service-owner`, `engineering-lead`), with a written reason; not FinOps alone, never an agent | FinOps approves | The team that owns the resource carries the risk of changing it |
+| Checking the decider's team | An active member of the owning team in a shared team directory, role from the directory; a typed role must match it | Trust the `--role` flag | A flag is a claim, not a check; the directory is the same HR-fed source later use cases (access review, joiners and leavers) need |
+| Cost basis | Effective (amortised) cost for spend, anomalies and savings; billed cost shown beside it | Billed cost | An upfront reservation would look like a spike and the usage it covers would look free; billed is still there to reconcile with the invoice |
+| Export formats | One adapter per format (FOCUS, AWS CUR 2.0, Azure cost details) into one line shape, detected from the header | Require FOCUS | Most organisations have CUR or Azure exports today; nothing after the adapter knows which cloud the bill came from |
+| Daily alerts | A rolling 28-day baseline, $100 and 20% floors, 2 days running; flagged days stay in the baseline | Use the monthly rule on daily data | Daily is for speed: the alert ends once the new level is absorbed, and the monthly rule carries persistence and savings. The 20% floor sits above the month-length effect (a 28-day month is 11% more a day) |
+| Tagging | The agent proposes tags with scored evidence; the team the resource would belong to approves; approved changes become a plan of AWS/Azure commands that the team runs | The agent applies tags it is confident about | Tags decide who pays; a wrong tag moves cost silently. Proposing keeps the zero-cloud-changes guarantee, and the plan saves the team the typing |
+| A team tag naming no known team | Not trusted: the cost is unallocated, with the reason, and the agent proposes the fix | Report it as its own team | `Team=loyalty` would otherwise show a phantom team, and its cost would sit outside Loyalty's budget |
+| Dashboard customisation | In the browser, per viewer, with a "copy as configuration" for the defaults; every figure still a sum of export lines | Editable numbers | Finance can try a shared-cost split or a budget without changing anyone else's view or any recorded figure |
+| Commitment recommendations | Renew smaller when under 90% used and ending within 60 days; propose a savings plan only for steady, production, all-on-demand compute | Recommend commitments wherever there is on-demand spend | A commitment spends money for a year; only the steady part is safe to commit, and the purchase goes through the team's and finance's own approval |
 | Rejected recommendations | Suppressed for 180 days with the team's reason | Propose again every month | Repeating a rejected idea teaches teams to ignore the report |
 | Unallocated spend | Reported as its own row and KPI, with the resources named | Spread across teams by share | Spreading hides the tagging gap that causes it |
 | Output | Report and decisions only; no write to the cloud or a ticketing system | Open tickets or apply schedules automatically | Zero risk during the pilot; ticket creation is the natural next step |

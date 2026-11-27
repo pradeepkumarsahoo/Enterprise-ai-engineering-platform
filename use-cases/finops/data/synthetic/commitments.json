@@ -1,0 +1,31 @@
+{
+  "_meta": {
+    "author": "Pradeep Sahoo",
+    "generated_by": "scripts/generate_synthetic_data.py",
+    "synthetic": true
+  },
+  "commitments": [
+    {
+      "id": "RI-order-service-db",
+      "type": "reserved-instance",
+      "team": "Commerce",
+      "covers": "order-service-db",
+      "start": "2026-03-01",
+      "end": "2027-02-28",
+      "payment": "all-upfront",
+      "term_months": 12,
+      "amount_usd": 72000.0
+    },
+    {
+      "id": "RI-membership-db",
+      "type": "reserved-instance",
+      "team": "Membership & Identity",
+      "covers": "membership-db",
+      "start": "2025-12-15",
+      "end": "2026-12-14",
+      "payment": "no-upfront",
+      "term_months": 12,
+      "amount_usd": 60000.0
+    }
+  ]
+}

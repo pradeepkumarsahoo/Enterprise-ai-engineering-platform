@@ -16,7 +16,7 @@ from .cli import register
 from .drafting import DRAFT_SCHEMA, DRAFT_SYSTEM_PROMPT, MockDrafter, render_draft_request
 from .rules import Rules
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 
 class ClaudeDrafter:
@@ -30,6 +30,15 @@ class ClaudeDrafter:
         return self.client.complete_json(DRAFT_SYSTEM_PROMPT, render_draft_request(a), DRAFT_SCHEMA)
 
 
+def get_tag_drafter(name: str, client_factory=ClaudeClient):
+    from .tagging import ClaudeTagDrafter, MockTagDrafter
+    if name == "mock":
+        return MockTagDrafter()
+    if name == "claude":
+        return ClaudeTagDrafter(client_factory())
+    raise ValueError(f"Unknown provider: {name} (use 'mock' or 'claude')")
+
+
 def get_drafter(name: str, client_factory=ClaudeClient):
     if name == "mock":
         return MockDrafter()
@@ -41,14 +50,15 @@ def get_drafter(name: str, client_factory=ClaudeClient):
 USE_CASE = UseCase(
     key="finops",
     title="FinOps",
-    summary="monthly spend by team, statistically flagged anomalies with likely cause, estimated vs realised savings",
+    summary="cost by team with a customisable dashboard, anomalies with likely cause, daily alerts, commitments, "
+            "estimated vs realised savings, and a tagging agent that proposes tag fixes",
     register=register,
     paths=("finops_dir",),
-    sources=("catalogue",),
+    sources=("catalogue", "team_directory"),
     settings=asdict(Rules()),
     gates={"anomaly_precision_min": 0.8, "anomaly_recall_min": 0.8, "cause_accuracy_min": 0.8,
-           "realised_error_max": 0.1, "rejected_drafts_max": 0, "invented_figures_max": 0, "cloud_changes_max": 0,
+           "realised_error_max": 0.1, "daily_lag_max_days": 2, "daily_false_alerts_max": 0, "tag_precision_min": 0.9, "tag_recall_min": 0.9, "rejected_drafts_max": 0, "invented_figures_max": 0, "cloud_changes_max": 0,
            "note": ""},
 )
 
-__all__ = ["ClaudeDrafter", "MockDrafter", "Rules", "USE_CASE", "get_drafter"]
+__all__ = ["ClaudeDrafter", "MockDrafter", "Rules", "USE_CASE", "get_drafter", "get_tag_drafter"]

@@ -2,10 +2,14 @@
 """Billing coverage, allocation to teams, and monthly spend with a run-rate forecast (use case 5).
 
 - Coverage: which months of the export are complete, and how many days of the latest one it holds.
-- Allocation: a cost line belongs to its `team` tag; failing that, to the owner of its `service`
-  tag in the service catalogue; failing that, it is unallocated (and reported as such).
-- Spend: net of credits, per team and billing month. The partial month's forecast is its
-  month-to-date figure scaled to the whole month (run-rate).
+- Allocation: a cost line belongs to its `team` tag, if that names a known team; failing that, to
+  the owner of its `service` tag in the service catalogue; failing that, it is unallocated (and
+  reported as such). A team tag that names no known team ("loyalty" for Loyalty) is not trusted:
+  it would create a phantom team in the report. The tagging agent proposes the fix.
+- Spend: effective (amortised) cost net of credits, per team and billing month. The partial
+  month's forecast is its month-to-date figure scaled to the whole month (run-rate). The billed
+  total per month is kept beside it, to reconcile with the invoice: the two differ by commitment
+  purchases being spread over their term.
 """
 from __future__ import annotations
 
@@ -51,13 +55,19 @@ def coverage(lines: list[CostLine]) -> Coverage:
 
 
 def allocate(line: CostLine, inp: FinOpsInputs) -> tuple[str, str]:
-    """(team, how): how is 'tag', 'catalogue' or 'none'."""
-    if line.tags.get("team"):
-        return line.tags["team"], "tag"
-    owner = inp.owner_of_service(line.tags.get("service", ""))
+    """(team, how): how is 'tag', 'catalogue', 'invalid' (a team tag naming no known team) or 'none'."""
+    return allocate_tags(line.tags, inp)
+
+
+def allocate_tags(tags: dict, inp: FinOpsInputs, known: set[str] | None = None) -> tuple[str, str]:
+    known = inp.known_teams if known is None else known
+    team = tags.get("team")
+    if team and (not known or team in known):
+        return team, "tag"
+    owner = inp.owner_of_service(tags.get("service", ""))
     if owner:
         return owner, "catalogue"
-    return UNALLOCATED, "none"
+    return UNALLOCATED, "invalid" if team else "none"
 
 
 @dataclass
@@ -67,6 +77,7 @@ class Spend:
     by_team: dict[str, dict[str, float]]       # team -> month -> net cost (partial month = month to date)
     forecast: dict[str, float]                 # team -> partial month projected to the whole month
     allocation: dict[str, dict]                # resource -> {team, how}
+    billed: dict[str, float] | None = None     # month -> billed total (None: the export has no billed cost)
 
     def total(self, month: str) -> float:
         return sum(row[month] for row in self.by_team.values())
@@ -78,10 +89,15 @@ class Spend:
 def spend_by_team(inp: FinOpsInputs, cov: Coverage) -> Spend:
     by_team: dict[str, dict[str, float]] = {}
     alloc = {}
+    known = inp.known_teams
+    billed = {m: 0.0 for m in cov.months} if inp.has_billed else None
     for l in inp.lines:
-        team, how = allocate(l, inp)
+        if billed is not None:
+            billed[l.month] += l.billed or 0.0
+        team, how = allocate_tags(l.tags, inp, known)
         alloc.setdefault(l.resource, {"team": team, "how": how})
         by_team.setdefault(team, {m: 0.0 for m in cov.months})[l.month] += l.cost
     order = sorted(t for t in by_team if t != UNALLOCATED) + ([UNALLOCATED] if UNALLOCATED in by_team else [])
     forecast = {t: by_team[t][cov.partial] * cov.scale if cov.partial else 0.0 for t in order}
-    return Spend(cov.months, cov.partial, {t: by_team[t] for t in order}, forecast, alloc)
+    return Spend(cov.months, cov.partial, {t: by_team[t] for t in order}, forecast, alloc,
+                 {m: round(v, 2) for m, v in billed.items()} if billed is not None else None)

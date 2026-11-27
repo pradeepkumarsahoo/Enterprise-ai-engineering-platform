@@ -1,0 +1,15 @@
+{
+  "_meta": {
+    "author": "Pradeep Sahoo",
+    "generated_by": "scripts/generate_synthetic_data.py",
+    "synthetic": true
+  },
+  "currency": "USD",
+  "basis": "amortised",
+  "monthly": {
+    "Commerce": 47000,
+    "Loyalty": 42000,
+    "Membership & Identity": 18000,
+    "Platform": 16000
+  }
+}

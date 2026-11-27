@@ -32,3 +32,8 @@ def month_add(m: str, k: int) -> str:
 
 def days_in(m: str) -> int:
     return calendar.monthrange(int(m[:4]), int(m[5:]))[1]
+
+
+def day_label(d: str) -> str:
+    """2026-10-03 -> 3 Oct 2026."""
+    return f"{int(d[8:10])} {calendar.month_abbr[int(d[5:7])]} {d[:4]}"

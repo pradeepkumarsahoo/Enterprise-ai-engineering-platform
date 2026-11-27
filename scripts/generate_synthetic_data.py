@@ -13,7 +13,11 @@ Writes, under the repository root:
     use-cases/change-risk/data/synthetic/changesets/<CHG>.json  what each change contains (PRs, diffs, coverage)
     use-cases/change-risk/data/synthetic/release_calendar.json  low-traffic windows, freezes, release policy
     use-cases/change-risk/data/synthetic/labels.json            expected bands and outcomes (scoring only)
-    use-cases/finops/data/synthetic/cost_export.csv             monthly cloud cost export (FOCUS-style columns)
+    use-cases/finops/data/synthetic/cost_export.csv             daily cloud cost export (FOCUS columns, amortised)
+    use-cases/finops/data/synthetic/commitments.json            reservations and their terms
+    use-cases/finops/data/synthetic/inventory.json              every cloud resource with its tags (tagging agent)
+    use-cases/finops/data/synthetic/budgets.json                monthly budget per team (dashboard)
+    shared-data/synthetic/team_directory.json                   people, team, role, leavers
     use-cases/finops/data/synthetic/utilisation.json            30-day utilisation per resource
     use-cases/finops/data/synthetic/config_changes.json         cloud configuration change log
     use-cases/finops/data/synthetic/savings_register.json       past recommendations and their decisions
@@ -36,6 +40,7 @@ JSON files carry a "_meta" block with the author and generator; readers ignore i
 """
 from __future__ import annotations
 
+import calendar
 import json
 import random
 from datetime import datetime, timedelta, timezone
@@ -879,19 +884,75 @@ FIN_OVERRIDES = {
 }
 FIN_BUMPS = {("partner-gateway-egress", "Data transfer"): {"2026-08": 1.09}}
 
+# resources with missing or wrong tags; their cost comes from a separate random stream, so the
+# resources above keep exactly the same figures
+FIN_EXTRA_RESOURCES = [
+    ("loyalty-cache", "Managed cache", "Databases", {"Team": "loyalty", "Environment": "Production"}, 2400, 0.0, 0.015),
+    ("search-indexer-nodes", "Kubernetes nodes", "Compute", {}, 3100, 0.0, 0.015),
+    ("membership-api-alb", "Load balancer", "Networking", {"env": "prod"}, 1200, 0.0, 0.015),
+    ("dev-test-vm-7", "Virtual machines", "Compute", {}, 600, 0.0, 0.015),
+]
+
+
+FIN_DAILY_NOISE = 0.02
+# the day a month's step change starts (days before it stay at the previous month's daily level)
+FIN_STEPS = {("loyalty-ledger-db", "Database snapshots"): {"2026-10": 3},     # CFG-0101 on 2 Oct, 08:14
+             ("platform-logging", "Log analytics"): {"2026-11": 4}}         # CFG-0103 on 3 Nov, 21:40
+
+# reservations: an all-upfront one bought in the window (billed once, amortised daily), and an
+# underused no-upfront one that ends soon
+FIN_COMMITMENTS = [
+    {"id": "RI-order-service-db", "type": "reserved-instance", "team": "Commerce", "covers": "order-service-db",
+     "start": "2026-03-01", "end": "2027-02-28", "payment": "all-upfront", "term_months": 12, "amount_usd": 72000.0},
+    {"id": "RI-membership-db", "type": "reserved-instance", "team": "Membership & Identity", "covers": "membership-db",
+     "start": "2025-12-15", "end": "2026-12-14", "payment": "no-upfront", "term_months": 12, "amount_usd": 60000.0},
+]
+FIN_RI_USED = {"RI-membership-db": 0.80}   # share of the reservation that membership-db uses
+
+FOCUS_HEADER = ["BillingPeriodStart", "ChargePeriodStart", "ChargePeriodEnd", "ChargeCategory", "ChargeFrequency",
+                "PricingCategory", "ServiceCategory", "ServiceName", "ResourceId", "BilledCost", "EffectiveCost",
+                "BillingCurrency", "CommitmentDiscountId", "CommitmentDiscountStatus", "Tags"]
+
+
+def _daily_split(rng: random.Random, total: float, n: int, step: int | None, prev_daily: float | None) -> list[float]:
+    """n daily values summing to total (to the cent); a step keeps days before it at prev_daily."""
+    w = [max(0.5, 1 + rng.gauss(0, FIN_DAILY_NOISE)) for _ in range(n)]
+    if step and prev_daily:
+        before = [prev_daily * x for x in w[:step - 1]]
+        rest, wa = total - sum(before), sum(w[step - 1:])
+        vals = before + [rest * x / wa for x in w[step - 1:]]
+    else:
+        vals = [total * x / sum(w) for x in w]
+    cents = [round(v, 2) for v in vals]
+    cents[-1] = round(round(total, 2) - sum(cents[:-1]), 2)
+    return cents
+
 
 def finops_cost_export() -> str:
+    """Daily FOCUS rows. Monthly totals are drawn exactly as the monthly export did, then split by day."""
     import csv
     import io
-    rng = random.Random(2605)
+    from datetime import date as _date, timedelta as _td
+    rng, drng, xrng = random.Random(2605), random.Random(2606), random.Random(2607)
     out = io.StringIO()
     w = csv.writer(out, lineterminator="\n")
-    w.writerow(["BillingPeriodStart", "ChargePeriodStart", "ChargePeriodEnd", "ChargeCategory", "ServiceCategory",
-                "ServiceName", "ResourceId", "BilledCost", "BillingCurrency", "Tags"])
+    w.writerow(FOCUS_HEADER)
+    tag = lambda t: json.dumps(t, separators=(",", ":"))
+    ri = {c["id"]: c for c in FIN_COMMITMENTS}
+    ri_daily = {cid: c["amount_usd"] / 365 for cid, c in ri.items()}
+    covered = {c["covers"]: c["id"] for c in FIN_COMMITMENTS}
+
+    def row(month, day, days, cat, freq, pricing, scat, item, res, billed, eff, tags, cid="", status=""):
+        d0 = _date.fromisoformat(day)
+        w.writerow([f"{month}-01", day, (d0 + _td(days=days)).isoformat(), cat, freq, pricing, scat, item, res,
+                    f"{billed:.2f}", f"{eff:.2f}", "USD", cid, status, tag(tags)])
+
+    prev: dict[tuple, float] = {}
     for i, month in enumerate(FIN_MONTHS):
-        start = f"{month}-01"
         y, m = int(month[:4]), int(month[5:])
-        end = f"{y + (m == 12)}-{m % 12 + 1:02d}-01" if month != FIN_MONTHS[-1] else f"{month}-{FIN_NOV_DAYS + 1:02d}"
+        n = FIN_NOV_DAYS if month == FIN_MONTHS[-1] else calendar.monthrange(y, m)[1]
+        days = [f"{month}-{d:02d}" for d in range(1, n + 1)]
+        totals = {}
         for res, item, cat, tags, base, trend, noise in FIN_RESOURCES:
             value = base * (1 + trend) ** i * (1 + rng.gauss(0, noise))
             override = FIN_OVERRIDES.get((res, item), {}).get(month)
@@ -900,12 +961,121 @@ def finops_cost_export() -> str:
             value *= FIN_BUMPS.get((res, item), {}).get(month, 1.0)
             if month == FIN_MONTHS[-1]:
                 value *= FIN_NOV_DAYS / 30
-            w.writerow([start, start, end, "Usage", cat, item, res, f"{value:.2f}", "USD",
-                        json.dumps(tags, separators=(",", ":"))])
+            totals[(res, item)] = value
+        for res, item, cat, tags, base, trend, noise in FIN_EXTRA_RESOURCES:
+            value = base * (1 + trend) ** i * (1 + xrng.gauss(0, noise))
+            totals[(res, item)] = value * (FIN_NOV_DAYS / 30 if month == FIN_MONTHS[-1] else 1)
+        # commitment fees and purchases for the month
+        for c in FIN_COMMITMENTS:
+            t = {"team": c["team"], "env": "prod"}
+            if c["payment"] == "all-upfront" and c["start"][:7] == month:
+                row(month, c["start"], 1, "Purchase", "One-Time", "Committed", "Databases", "Reserved instance",
+                    c["id"], c["amount_usd"], 0.0, t, c["id"])
+            if c["payment"] == "no-upfront":
+                row(month, days[0], n, "Purchase", "Recurring", "Committed", "Databases", "Reserved instance",
+                    c["id"], round(ri_daily[c["id"]] * n, 2), 0.0, t, c["id"])
+        for res, item, cat, tags, base, trend, noise in FIN_RESOURCES + FIN_EXTRA_RESOURCES:
+            cid = covered.get(res) if item == "Managed PostgreSQL" else None
+            if cid and ri[cid]["start"] <= days[0]:
+                used = FIN_RI_USED.get(cid, 1.0)
+                for day in days:
+                    row(month, day, 1, "Usage", "Usage-Based", "Committed", cat, item, res, 0.0,
+                        ri_daily[cid] * used, tags, cid, "Used")
+                    if used < 1:
+                        row(month, day, 1, "Usage", "Usage-Based", "Committed", cat, "Reserved instance (unused)",
+                            cid, 0.0, ri_daily[cid] * (1 - used), {"team": ri[cid]["team"], "env": "prod"}, cid,
+                            "Unused")
+                continue
+            step = FIN_STEPS.get((res, item), {}).get(month)
+            vals = _daily_split(drng, totals[(res, item)], n, step, prev.get((res, item)))
+            for day, v in zip(days, vals):
+                row(month, day, 1, "Usage", "Usage-Based", "On-Demand", cat, item, res, v, v, tags)
+            prev[(res, item)] = totals[(res, item)] / n
         if month == "2026-09":
-            w.writerow([start, start, end, "Credit", "Compute", "Kubernetes nodes", "order-service-nodes", "-2500.00",
-                        "USD", json.dumps(FIN_RESOURCES[0][3], separators=(",", ":"))])
+            row(month, "2026-09-30", 1, "Credit", "One-Time", "", "Compute", "Kubernetes nodes",
+                "order-service-nodes", -2500.0, -2500.0, FIN_RESOURCES[0][3])
     return out.getvalue()
+
+
+ACCOUNTS = {   # cloud accounts, from the organisation's account inventory
+    "111111111111": {"name": "prod-main", "env": "prod"},
+    "222222222222": {"name": "nonprod", "env": None},
+    "333333333333": {"name": "network-hub", "env": "prod", "shared": True, "owner_team": "Platform"},
+}
+# resource -> (account, type, created_by, created_on); tags come from the cost export's resources
+INVENTORY_META = {
+    "order-service-nodes": ("111111111111", "eks:nodegroup", "lee.dev", "2024-03-02"),
+    "order-service-db": ("111111111111", "rds:db", "lee.dev", "2024-03-02"),
+    "partner-gateway-egress": ("111111111111", "ec2:transit", "sam.owner", "2024-06-11"),
+    "commerce-staging-nodes": ("222222222222", "eks:nodegroup", "lee.dev", "2024-05-20"),
+    "loyalty-ledger-db": ("111111111111", "rds:db", "dana.dev", "2023-11-08"),
+    "promotion-engine-nodes": ("111111111111", "eks:nodegroup", "dana.dev", "2024-01-15"),
+    "membership-api-nodes": ("111111111111", "eks:nodegroup", "ria.owner", "2023-09-01"),
+    "membership-db": ("111111111111", "rds:db", "ria.owner", "2023-09-01"),
+    "membership-orphan-volumes": ("111111111111", "ec2:volume", "ria.owner", "2025-02-14"),
+    "platform-sandbox-cluster": ("222222222222", "eks:cluster", "noor.lead", "2024-02-01"),
+    "notification-worker-nodes": ("111111111111", "eks:nodegroup", "noor.lead", "2023-07-19"),
+    "platform-logging": ("111111111111", "logs:workspace", "noor.lead", "2023-05-02"),
+    "shared-nat-gateway": ("333333333333", "ec2:natgateway", "noor.lead", "2023-05-02"),
+    "loyalty-cache": ("111111111111", "elasticache:cluster", "dana.dev", "2026-02-03"),
+    "search-indexer-nodes": ("111111111111", "eks:nodegroup", "lee.dev", "2026-01-12"),
+    "membership-api-alb": ("111111111111", "elasticloadbalancing:loadbalancer", "ria.owner", "2025-11-20"),
+    "dev-test-vm-7": ("222222222222", "ec2:instance", "dana.dev", "2026-01-05"),
+}
+INVENTORY_ONLY = [   # resources with no cost line in the export window
+    {"name": "old-promo-bucket", "account": "111111111111", "type": "s3:bucket", "created_by": "ana.smith",
+     "created_on": "2022-10-01", "tags": {"Owner": "ana.smith"}},
+]
+
+
+def inventory() -> dict:
+    tags = {res: t for res, _, _, t, *_ in FIN_RESOURCES + FIN_EXTRA_RESOURCES}
+    out = []
+    for name, (acct, rtype, by, on) in INVENTORY_META.items():
+        out.append({"id": f"arn:aws:{rtype.split(':')[0]}:eu-west-1:{acct}:{rtype.split(':')[1]}/{name}",
+                    "name": name, "provider": "aws", "type": rtype, "account": acct, "region": "eu-west-1",
+                    "created_by": by, "created_on": on, "tags": tags[name]})
+    for r in INVENTORY_ONLY:
+        out.append({"id": f"arn:aws:{r['type'].split(':')[0]}:::{r['name']}", "provider": "aws",
+                    "region": "eu-west-1", **r})
+    return {"as_of": "2026-11-17", "accounts": ACCOUNTS, "resources": out}
+
+
+BUDGETS = {"currency": "USD", "basis": "amortised", "monthly": {
+    "Commerce": 47000, "Loyalty": 42000, "Membership & Identity": 18000, "Platform": 16000}}
+
+TAGGING_LABELS = {   # written by hand from the scenario; never read by the tagging agent
+    "proposals": {
+        "loyalty-cache": {"set": {"team": "Loyalty", "env": "prod"}, "remove": ["Environment", "Team"]},
+        "search-indexer-nodes": {"set": {"env": "prod"}, "remove": []},
+        "membership-api-alb": {"set": {"team": "Membership & Identity", "service": "membership-api"}, "remove": []},
+        "dev-test-vm-7": {"set": {"env": "dev"}, "remove": []},
+        "shared-nat-gateway": {"set": {"team": "Platform", "env": "prod", "shared": "true"}, "remove": []},
+        "partner-gateway-egress": {"set": {"team": "Commerce"}, "remove": []},
+        "platform-logging": {"set": {"shared": "true"}, "remove": []},
+        "old-promo-bucket": {"set": {"env": "prod"}, "remove": []},
+    },
+    "no_team": ["dev-test-vm-7", "old-promo-bucket", "search-indexer-nodes"],
+    "compliant": ["commerce-staging-nodes", "loyalty-ledger-db", "membership-api-nodes", "membership-db",
+                  "notification-worker-nodes", "order-service-db", "order-service-nodes", "platform-sandbox-cluster",
+                  "promotion-engine-nodes"],
+}
+
+
+TEAM_DIRECTORY = {   # from the HR feed and team directory: who is in which team, in which role
+    "as_of": "2026-11-17",
+    "people": {
+        "lee.lead": {"team": "Loyalty", "role": "engineering-lead", "active": True},
+        "dana.owner": {"team": "Loyalty", "role": "service-owner", "active": True},
+        "dana.dev": {"team": "Loyalty", "role": "engineer", "active": True},
+        "ria.owner": {"team": "Membership & Identity", "role": "service-owner", "active": True},
+        "sam.owner": {"team": "Commerce", "role": "service-owner", "active": True},
+        "lee.dev": {"team": "Commerce", "role": "engineer", "active": True},
+        "jo.lead": {"team": "Commerce", "role": "engineering-lead", "active": False, "left_on": "2026-10-31"},
+        "noor.lead": {"team": "Platform", "role": "engineering-lead", "active": True},
+        "finley.finops": {"team": "FinOps", "role": "finops-analyst", "active": True},
+    },
+}
 
 
 FIN_UTILISATION = {   # 30 days to 2026-11-16, from the metrics platform
@@ -955,9 +1125,15 @@ FINOPS_LABELS = {   # written by hand from the scenario; never read by the analy
         {"resource": "platform-logging", "line_item": "Log analytics", "months": ["2026-11"],
          "cause_config": "CFG-0103", "cause_change": None, "confidence": "medium"},
     ],
-    "recommendations": ["REC-IDLE-membership-orphan-volumes", "REC-REV-loyalty-ledger-db",
-                        "REC-REV-notification-worker", "REC-RS-promotion-engine-nodes",
-                        "REC-SCH-commerce-staging-nodes"],
+    "recommendations": ["REC-CMT-order-service-nodes", "REC-IDLE-membership-orphan-volumes",
+                        "REC-REV-loyalty-ledger-db", "REC-REV-notification-worker", "REC-RNW-RI-membership-db",
+                        "REC-RS-promotion-engine-nodes", "REC-SCH-commerce-staging-nodes"],
+    "daily": [   # the first day each planted step shows in the daily export
+        {"resource": "loyalty-ledger-db", "line_item": "Database snapshots", "onset": "2026-10-03"},
+        {"resource": "platform-logging", "line_item": "Log analytics", "onset": "2026-11-04"},
+    ],
+    "commitments": {"RI-membership-db": {"underused": True, "expiring": True},
+                    "RI-order-service-db": {"underused": False, "expiring": False}},
     "suppressed": ["REC-RS-membership-api-nodes"],
     "not_flagged": [   # planted on purpose; flagging any month of these is a false positive
         {"resource": "order-service-nodes", "line_item": "Kubernetes nodes",
@@ -965,7 +1141,8 @@ FINOPS_LABELS = {   # written by hand from the scenario; never read by the analy
         {"resource": "partner-gateway-egress", "line_item": "Data transfer", "why": "a 9% bump in August"},
     ],
     "realised": {"REC-SCH-platform-sandbox-cluster": {"expected_monthly_usd": 2700, "tolerance": 0.1}},
-    "unallocated_resources": ["shared-nat-gateway"],
+    "unallocated_resources": ["dev-test-vm-7", "loyalty-cache", "membership-api-alb", "search-indexer-nodes",
+                              "shared-nat-gateway"],
 }
 
 
@@ -1023,6 +1200,11 @@ def main() -> None:
     _write(FIN / "config_changes.json", {"_meta": META, "changes": FIN_CONFIG_CHANGES})
     _write(FIN / "savings_register.json", {"_meta": META, "recommendations": FIN_SAVINGS_REGISTER})
     _write(FIN / "labels.json", {"_meta": META, **FINOPS_LABELS})
+    _write(FIN / "commitments.json", {"_meta": META, "commitments": FIN_COMMITMENTS})
+    _write(FIN / "inventory.json", {"_meta": META, **inventory()})
+    _write(FIN / "budgets.json", {"_meta": META, **BUDGETS})
+    _write(FIN / "tagging_labels.json", {"_meta": META, **TAGGING_LABELS})
+    _write(SHARED / "team_directory.json", {"_meta": META, **TEAM_DIRECTORY})
     for table, rows in SERVICENOW.items():
         _write(SHARED / "servicenow" / f"{table}.json", {"_meta": META, "result": rows})
     for folder, builders in (("incidents", (inc_0987, inc_1011, inc_0995, inc_1003, inc_1019, inc_1024, inc_1039, inc_1036)),

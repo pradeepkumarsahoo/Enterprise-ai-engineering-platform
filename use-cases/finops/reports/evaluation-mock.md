@@ -1,6 +1,6 @@
-# FinOps evaluation · finops rules v1.0 · provider `mock`
+# FinOps evaluation · finops rules v1.1 · provider `mock`
 
-14 cost series judged over May 2026–Nov 2026 (98 series-months) against hand-written labels. Gates: **PASS**.
+19 cost series judged over May 2026–Nov 2026 (133 series-months) against hand-written labels. Gates: **PASS**.
 
 | Measure | Result | Gate | |
 |---|---|---|---|
@@ -8,15 +8,19 @@
 | Anomaly recall (series-months) | 100% | ≥ 80% | ✅ |
 | Likely cause and confidence correct | 100% | ≥ 80% | ✅ |
 | Realised saving vs expected (worst error) | 0.7% | ≤ 10% | ✅ |
+| Daily alert raised after a labelled step (worst, days) | 1 | ≤ 2 | ✅ |
+| Daily alerts outside a labelled anomaly | 0 | ≤ 0 | ✅ |
 | Drafts rejected by validation | 0 | ≤ 0 | ✅ |
 | Invented figures | 0 | ≤ 0 | ✅ |
 | Changes made to cloud resources | 0 | ≤ 0 | ✅ |
 
 Checks without a gate:
 
-- Proposed recommendations match labels: ✅ (REC-IDLE-membership-orphan-volumes, REC-REV-loyalty-ledger-db, REC-REV-notification-worker, REC-RS-promotion-engine-nodes, REC-SCH-commerce-staging-nodes)
+- Proposed recommendations match labels: ✅ (REC-CMT-order-service-nodes, REC-IDLE-membership-orphan-volumes, REC-REV-loyalty-ledger-db, REC-REV-notification-worker, REC-RNW-RI-membership-db, REC-RS-promotion-engine-nodes, REC-SCH-commerce-staging-nodes)
 - Suppressed after rejection match labels: ✅ (REC-RS-membership-api-nodes)
 - Unallocated resources match labels: ✅
+- Commitments flagged as underused or ending match labels: ✅
+- Daily alerts: loyalty-ledger-db · Database snapshots raised 1 day(s) after onset; platform-logging · Log analytics raised 1 day(s) after onset. Outside a labelled anomaly: none.
 - Deliberately not flagged: ✅ order-service-nodes · Kubernetes nodes (steady growth of 1.5% a month, and the September SLA credit); partner-gateway-egress · Data transfer (a 9% bump in August). False positives: none. Missed: none.
 
 | Anomaly | Expected cause | Got | |

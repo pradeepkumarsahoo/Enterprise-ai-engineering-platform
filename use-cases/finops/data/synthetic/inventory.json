@@ -1,0 +1,275 @@
+{
+  "_meta": {
+    "author": "Pradeep Sahoo",
+    "generated_by": "scripts/generate_synthetic_data.py",
+    "synthetic": true
+  },
+  "as_of": "2026-11-17",
+  "accounts": {
+    "111111111111": {
+      "name": "prod-main",
+      "env": "prod"
+    },
+    "222222222222": {
+      "name": "nonprod",
+      "env": null
+    },
+    "333333333333": {
+      "name": "network-hub",
+      "env": "prod",
+      "shared": true,
+      "owner_team": "Platform"
+    }
+  },
+  "resources": [
+    {
+      "id": "arn:aws:eks:eu-west-1:111111111111:nodegroup/order-service-nodes",
+      "name": "order-service-nodes",
+      "provider": "aws",
+      "type": "eks:nodegroup",
+      "account": "111111111111",
+      "region": "eu-west-1",
+      "created_by": "lee.dev",
+      "created_on": "2024-03-02",
+      "tags": {
+        "team": "Commerce",
+        "service": "order-service",
+        "env": "prod"
+      }
+    },
+    {
+      "id": "arn:aws:rds:eu-west-1:111111111111:db/order-service-db",
+      "name": "order-service-db",
+      "provider": "aws",
+      "type": "rds:db",
+      "account": "111111111111",
+      "region": "eu-west-1",
+      "created_by": "lee.dev",
+      "created_on": "2024-03-02",
+      "tags": {
+        "team": "Commerce",
+        "service": "order-service",
+        "env": "prod"
+      }
+    },
+    {
+      "id": "arn:aws:ec2:eu-west-1:111111111111:transit/partner-gateway-egress",
+      "name": "partner-gateway-egress",
+      "provider": "aws",
+      "type": "ec2:transit",
+      "account": "111111111111",
+      "region": "eu-west-1",
+      "created_by": "sam.owner",
+      "created_on": "2024-06-11",
+      "tags": {
+        "service": "partner-gateway",
+        "env": "prod"
+      }
+    },
+    {
+      "id": "arn:aws:eks:eu-west-1:222222222222:nodegroup/commerce-staging-nodes",
+      "name": "commerce-staging-nodes",
+      "provider": "aws",
+      "type": "eks:nodegroup",
+      "account": "222222222222",
+      "region": "eu-west-1",
+      "created_by": "lee.dev",
+      "created_on": "2024-05-20",
+      "tags": {
+        "team": "Commerce",
+        "env": "staging"
+      }
+    },
+    {
+      "id": "arn:aws:rds:eu-west-1:111111111111:db/loyalty-ledger-db",
+      "name": "loyalty-ledger-db",
+      "provider": "aws",
+      "type": "rds:db",
+      "account": "111111111111",
+      "region": "eu-west-1",
+      "created_by": "dana.dev",
+      "created_on": "2023-11-08",
+      "tags": {
+        "team": "Loyalty",
+        "service": "loyalty-ledger",
+        "env": "prod"
+      }
+    },
+    {
+      "id": "arn:aws:eks:eu-west-1:111111111111:nodegroup/promotion-engine-nodes",
+      "name": "promotion-engine-nodes",
+      "provider": "aws",
+      "type": "eks:nodegroup",
+      "account": "111111111111",
+      "region": "eu-west-1",
+      "created_by": "dana.dev",
+      "created_on": "2024-01-15",
+      "tags": {
+        "team": "Loyalty",
+        "service": "promotion-engine",
+        "env": "prod"
+      }
+    },
+    {
+      "id": "arn:aws:eks:eu-west-1:111111111111:nodegroup/membership-api-nodes",
+      "name": "membership-api-nodes",
+      "provider": "aws",
+      "type": "eks:nodegroup",
+      "account": "111111111111",
+      "region": "eu-west-1",
+      "created_by": "ria.owner",
+      "created_on": "2023-09-01",
+      "tags": {
+        "team": "Membership & Identity",
+        "service": "membership-api",
+        "env": "prod"
+      }
+    },
+    {
+      "id": "arn:aws:rds:eu-west-1:111111111111:db/membership-db",
+      "name": "membership-db",
+      "provider": "aws",
+      "type": "rds:db",
+      "account": "111111111111",
+      "region": "eu-west-1",
+      "created_by": "ria.owner",
+      "created_on": "2023-09-01",
+      "tags": {
+        "team": "Membership & Identity",
+        "service": "membership-api",
+        "env": "prod"
+      }
+    },
+    {
+      "id": "arn:aws:ec2:eu-west-1:111111111111:volume/membership-orphan-volumes",
+      "name": "membership-orphan-volumes",
+      "provider": "aws",
+      "type": "ec2:volume",
+      "account": "111111111111",
+      "region": "eu-west-1",
+      "created_by": "ria.owner",
+      "created_on": "2025-02-14",
+      "tags": {
+        "team": "Membership & Identity",
+        "env": "prod"
+      }
+    },
+    {
+      "id": "arn:aws:eks:eu-west-1:222222222222:cluster/platform-sandbox-cluster",
+      "name": "platform-sandbox-cluster",
+      "provider": "aws",
+      "type": "eks:cluster",
+      "account": "222222222222",
+      "region": "eu-west-1",
+      "created_by": "noor.lead",
+      "created_on": "2024-02-01",
+      "tags": {
+        "team": "Platform",
+        "env": "sandbox"
+      }
+    },
+    {
+      "id": "arn:aws:eks:eu-west-1:111111111111:nodegroup/notification-worker-nodes",
+      "name": "notification-worker-nodes",
+      "provider": "aws",
+      "type": "eks:nodegroup",
+      "account": "111111111111",
+      "region": "eu-west-1",
+      "created_by": "noor.lead",
+      "created_on": "2023-07-19",
+      "tags": {
+        "team": "Platform",
+        "service": "notification-worker",
+        "env": "prod"
+      }
+    },
+    {
+      "id": "arn:aws:logs:eu-west-1:111111111111:workspace/platform-logging",
+      "name": "platform-logging",
+      "provider": "aws",
+      "type": "logs:workspace",
+      "account": "111111111111",
+      "region": "eu-west-1",
+      "created_by": "noor.lead",
+      "created_on": "2023-05-02",
+      "tags": {
+        "team": "Platform",
+        "service": "shared-logging",
+        "env": "prod"
+      }
+    },
+    {
+      "id": "arn:aws:ec2:eu-west-1:333333333333:natgateway/shared-nat-gateway",
+      "name": "shared-nat-gateway",
+      "provider": "aws",
+      "type": "ec2:natgateway",
+      "account": "333333333333",
+      "region": "eu-west-1",
+      "created_by": "noor.lead",
+      "created_on": "2023-05-02",
+      "tags": {}
+    },
+    {
+      "id": "arn:aws:elasticache:eu-west-1:111111111111:cluster/loyalty-cache",
+      "name": "loyalty-cache",
+      "provider": "aws",
+      "type": "elasticache:cluster",
+      "account": "111111111111",
+      "region": "eu-west-1",
+      "created_by": "dana.dev",
+      "created_on": "2026-02-03",
+      "tags": {
+        "Team": "loyalty",
+        "Environment": "Production"
+      }
+    },
+    {
+      "id": "arn:aws:eks:eu-west-1:111111111111:nodegroup/search-indexer-nodes",
+      "name": "search-indexer-nodes",
+      "provider": "aws",
+      "type": "eks:nodegroup",
+      "account": "111111111111",
+      "region": "eu-west-1",
+      "created_by": "lee.dev",
+      "created_on": "2026-01-12",
+      "tags": {}
+    },
+    {
+      "id": "arn:aws:elasticloadbalancing:eu-west-1:111111111111:loadbalancer/membership-api-alb",
+      "name": "membership-api-alb",
+      "provider": "aws",
+      "type": "elasticloadbalancing:loadbalancer",
+      "account": "111111111111",
+      "region": "eu-west-1",
+      "created_by": "ria.owner",
+      "created_on": "2025-11-20",
+      "tags": {
+        "env": "prod"
+      }
+    },
+    {
+      "id": "arn:aws:ec2:eu-west-1:222222222222:instance/dev-test-vm-7",
+      "name": "dev-test-vm-7",
+      "provider": "aws",
+      "type": "ec2:instance",
+      "account": "222222222222",
+      "region": "eu-west-1",
+      "created_by": "dana.dev",
+      "created_on": "2026-01-05",
+      "tags": {}
+    },
+    {
+      "id": "arn:aws:s3:::old-promo-bucket",
+      "provider": "aws",
+      "region": "eu-west-1",
+      "name": "old-promo-bucket",
+      "account": "111111111111",
+      "type": "s3:bucket",
+      "created_by": "ana.smith",
+      "created_on": "2022-10-01",
+      "tags": {
+        "Owner": "ana.smith"
+      }
+    }
+  ]
+}

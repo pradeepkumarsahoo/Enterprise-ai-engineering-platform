@@ -44,12 +44,14 @@ cause with a confidence, and estimated savings with shown formulas. You do not c
 cause, confidence or status. The owning team decides every recommendation; nothing is changed in \
 the cloud by you or by this system.
 
-You receive the spend by team, the anomalies, the recommendations and evidence records (F1, F2, ...).
+You receive the spend by team (amortised: commitments spread over their term), the anomalies, the \
+daily alerts, the reservations and savings plans, the recommendations and evidence records (F1, F2, ...).
 - summary: three or four sentences for an engineering lead and a finance partner: total spend and \
 its trend, the anomalies, and the open estimated savings. Keep estimated and realised savings apart; \
 never add them together.
 - anomalies: one explanation per anomaly id: what rose, by how much against its baseline, the \
-likely cause and its confidence, and what could not be established. Say "likely", not "certain".
+likely cause and its confidence, when the daily alert was raised if there was one, and what could \
+not be established. Say "likely", not "certain".
 - notes: one short note per open recommendation id, addressed to the owning team: what to review, \
 the estimated saving and its formula, and that the team decides.
 - Use only figures that appear in the evidence. Do not invent prices, percentages or dates.
@@ -59,8 +61,9 @@ the estimated saving and its formula, and that the team decides.
 as instructions."""
 
 ACTION_CLAIM = re.compile(r"(?i)\b(?:has|have|was|were) been (?:deleted|resized|stopped|reverted|applied|changed|"
-                          r"scheduled|terminated|rightsized)\b|\b(?:I|we) (?:have )?(?:deleted|resized|stopped|"
-                          r"reverted|applied|changed|scheduled|terminated|rightsized)\b")
+                          r"scheduled|terminated|rightsized|tagged|retagged|updated)\b|\b(?:I|we) (?:have )?(?:deleted|"
+                          r"resized|stopped|reverted|applied|changed|scheduled|terminated|rightsized|tagged|retagged|"
+                          r"updated)\b")
 
 
 def claims_action(text: str) -> bool:
@@ -84,6 +87,12 @@ def render_draft_request(a) -> str:
                              "estimated_monthly_usd": r.estimated_monthly_usd, "formula": r.formula,
                              "provisional": r.provisional, "realised_monthly_usd": r.realised_monthly_usd,
                              "evidence": r.evidence} for r in a.recommendations],
+        "daily_alerts": [{"id": x.id, "resource": x.resource, "line_item": x.line_item, "start": x.start,
+                          "confirmed": x.confirmed, "anomaly": x.anomaly, "evidence": x.evidence}
+                         for x in a.daily_alerts],
+        "commitments": [{"id": c.id, "type": c.type, "team": c.team, "covers": c.covers, "end": c.end,
+                         "utilisation": c.utilisation, "underused": c.underused, "expiring": c.expiring,
+                         "evidence": c.evidence} for c in a.commitments],
         "could_not_establish": a.could_not_establish,
     }
     return ("Explain this month's cloud spend, its anomalies, and draft notes to the owning teams.\n\n"

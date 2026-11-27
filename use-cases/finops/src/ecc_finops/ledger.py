@@ -2,8 +2,11 @@
 """Decisions on savings recommendations, enforced in code (use case 5).
 
 These rules are governance, so they live here and change through code review, not a config edit:
-- only the team that owns the resource decides: approvers need the role `service-owner` or
-  `engineering-lead`. A FinOps analyst proposes and follows up, but cannot approve alone;
+- only the team that owns the resource decides: the person must be an active member of that team
+  in the team directory, with the role `service-owner` or `engineering-lead` there. A role typed
+  on the command line must match the directory; it cannot grant anything. A FinOps analyst
+  proposes and follows up, but cannot approve alone; someone who has left cannot decide;
+- the same check applies to recording an implementation;
 - an agent can never approve, reject or record an implementation;
 - every decision needs a written reason;
 - only a proposed recommendation can be approved or rejected; approval freezes its estimate,
@@ -52,12 +55,33 @@ def _person(by: str) -> None:
         raise ValueError("An agent cannot decide on or implement a savings recommendation")
 
 
-def decide(rec: dict, workdir: Path, by: str, role: str, approve: bool, note: str, analysis_id: str) -> dict:
-    """Record the owning team's decision. Raises ValueError when the rules above forbid it."""
-    _person(by)
-    if role not in OWNER_ROLES:
+def owning_member(rec: dict, by: str, role: str | None, directory: dict) -> dict:
+    """The directory entry for `by`, if they may act for the team that owns `rec`; else ValueError."""
+    if role is not None and role not in OWNER_ROLES:
         raise ValueError(f"Role '{role}' cannot decide on savings (allowed: {', '.join(OWNER_ROLES)}); "
                          "the team that owns the resource decides")
+    people = (directory or {}).get("people", {})
+    p = people.get(by)
+    if p is None:
+        raise ValueError(f"{by} is not in the team directory, so their team cannot be checked")
+    if not p.get("active", True):
+        raise ValueError(f"{by} left {p.get('team', 'their team')} on {p.get('left_on', 'an earlier date')} "
+                         "and cannot decide")
+    if p.get("team") != rec["team"]:
+        raise ValueError(f"{by} belongs to {p.get('team')}; only {rec['team']}, the team that owns "
+                         f"{rec['resource']}, decides on {rec['id']}")
+    if p.get("role") not in OWNER_ROLES:
+        raise ValueError(f"{by} is {p.get('role')} in {p['team']}; only {', '.join(OWNER_ROLES)} decide")
+    if role is not None and role != p["role"]:
+        raise ValueError(f"{by} is {p['role']} in the team directory, not {role}")
+    return p
+
+
+def decide(rec: dict, workdir: Path, by: str, role: str | None, approve: bool, note: str, analysis_id: str,
+           directory: dict) -> dict:
+    """Record the owning team's decision. Raises ValueError when the rules above forbid it."""
+    _person(by)
+    role = owning_member(rec, by, role, directory)["role"]
     if not note.strip():
         raise ValueError("A written reason is required")
     if rec["status"] != "proposed":
@@ -69,13 +93,15 @@ def decide(rec: dict, workdir: Path, by: str, role: str, approve: bool, note: st
     _append(workdir, entry)
     AuditLog(Path(workdir) / "audit.jsonl").record(by, f"finops.recommendation.{entry['decision']}", rec["id"],
                                                     analysis_id, role=role, team=rec["team"],
-                                                    estimate=rec["estimated_monthly_usd"])
+                                                    estimate=rec["estimated_monthly_usd"], member_of=rec["team"])
     return entry
 
 
-def record_implemented(rec: dict, workdir: Path, by: str, on: str, change: str, as_of: str, analysis_id: str) -> dict:
+def record_implemented(rec: dict, workdir: Path, by: str, on: str, change: str, as_of: str, analysis_id: str,
+                       directory: dict) -> dict:
     """Record that the owning team made the change. The saving is measured later, from the bill."""
     _person(by)
+    owning_member(rec, by, None, directory)
     if rec["status"] != "approved":
         raise ValueError(f"{rec['id']} is {rec['status']}; only an approved recommendation can be implemented")
     day = date.fromisoformat(on)

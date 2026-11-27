@@ -17,7 +17,7 @@ from typing import Callable
 from .causes import Cause, confidence
 from .rules import Rules
 from .sources import FinOpsInputs
-from .spend import Coverage, allocate
+from .spend import Coverage, allocate_tags
 
 
 @dataclass
@@ -28,19 +28,23 @@ class Series:
     team: str
     service: str
     env: str
-    values: dict[str, float]          # month -> usage cost; the partial month is its run-rate
+    values: dict[str, float]          # month -> usage cost (effective); the partial month is its run-rate
+    committed: bool = False           # some of its usage is covered by a reservation or savings plan
 
 
 def build_series(inp: FinOpsInputs, cov: Coverage) -> list[Series]:
     out: dict[tuple, Series] = {}
+    known = inp.known_teams
     for l in inp.lines:
         if l.charge_category != "Usage":
             continue
         k = (l.resource, l.line_item)
         if k not in out:
-            out[k] = Series(l.resource, l.line_item, l.category, allocate(l, inp)[0], l.tags.get("service", ""),
+            out[k] = Series(l.resource, l.line_item, l.category, allocate_tags(l.tags, inp, known)[0], l.tags.get("service", ""),
                             l.tags.get("env", ""), {})
         out[k].values[l.month] = out[k].values.get(l.month, 0.0) + l.cost
+        if l.commitment and l.commitment_status == "Used":
+            out[k].committed = True
     if cov.partial and cov.days_covered:
         for s in out.values():
             if cov.partial in s.values:
@@ -112,6 +116,7 @@ class Anomaly:
     evidence: list[str] = field(default_factory=list)
     could_not_establish: list[str] = field(default_factory=list)
     history: dict[str, float] = field(default_factory=dict)   # the whole series, for the report
+    daily: list[str] = field(default_factory=list)            # daily alerts (DA-n) on this anomaly
 
     @property
     def onset(self) -> Point:

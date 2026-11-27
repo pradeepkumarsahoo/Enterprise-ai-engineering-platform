@@ -2,12 +2,15 @@
 """FinOps evaluation against hand-written labels (use case 5).
 
 Runs a full analysis, then scores it: anomaly precision and recall over every judged
-series-month, likely cause and confidence, the recommendations proposed and suppressed, realised
-savings, unallocated resources, the series that must NOT be flagged, rejected drafts, invented
-figures, and changes made to cloud resources (from the audit log; must be zero).
+series-month, likely cause and confidence, how many days after a labelled step the daily alert
+was raised and whether any daily alert fell outside a labelled anomaly, the recommendations
+proposed and suppressed, realised savings, commitments flagged as underused or ending, unallocated
+resources, the series that must NOT be flagged, rejected drafts, invented figures, and changes
+made to cloud resources (from the audit log; must be zero).
 """
 from __future__ import annotations
 
+from datetime import date
 from pathlib import Path
 
 from ecc_core.audit import AuditLog
@@ -23,6 +26,8 @@ GATES = (
     ("anomaly_recall_min", "anomaly_recall", "Anomaly recall (series-months)", ">=", "{:.0%}"),
     ("cause_accuracy_min", "cause_accuracy", "Likely cause and confidence correct", ">=", "{:.0%}"),
     ("realised_error_max", "realised_error_max", "Realised saving vs expected (worst error)", "<=", "{:.1%}"),
+    ("daily_lag_max_days", "daily_lag_max", "Daily alert raised after a labelled step (worst, days)", "<=", "{}"),
+    ("daily_false_alerts_max", "daily_false_alerts", "Daily alerts outside a labelled anomaly", "<=", "{}"),
     ("rejected_drafts_max", "rejected_drafts", "Drafts rejected by validation", "<=", "{}"),
     ("invented_figures_max", "invented_figures", "Invented figures", "<=", "{}"),
     ("cloud_changes_max", "cloud_changes", "Changes made to cloud resources", "<=", "{}"),
@@ -63,6 +68,19 @@ def metrics(res: dict, labels: dict, audit: list[dict]) -> tuple[dict, list[dict
         got = next((y["realised_monthly_usd"] for y in recs if y["id"] == rid), None)
         real_err[rid] = abs(got - x["expected_monthly_usd"]) / x["expected_monthly_usd"] if got is not None else 1.0
     quiet = {(x["resource"], x["line_item"]) for x in labels.get("not_flagged", [])}
+    alerts = res.get("daily", {}).get("alerts", [])
+    lags = {}
+    for x in labels.get("daily", []):
+        onset = date.fromisoformat(x["onset"])
+        hit = [a for a in alerts if a["resource"] == x["resource"] and a["line_item"] == x["line_item"]
+               and date.fromisoformat(a["start"]) >= onset]
+        lags[f"{x['resource']} · {x['line_item']}"] = \
+            min((date.fromisoformat(a["confirmed"]) - onset).days for a in hit) if hit else 99
+    labelled = {(x["resource"], x["line_item"], m) for x in labels["anomalies"] for m in x["months"]}
+    false_alerts = sorted(f"{a['id']} {a['resource']} · {a['line_item']} from {a['start']}" for a in alerts
+                          if (a["resource"], a["line_item"], a["start"][:7]) not in labelled)
+    want_c = labels.get("commitments", {})
+    got_c = {c["id"]: {"underused": c["underused"], "expiring": c["expiring"]} for c in res.get("commitments", [])}
     m = {"anomaly_precision": round(tp / len(flagged) if flagged else 1.0, 3),
          "anomaly_recall": round(tp / len(want) if want else 1.0, 3),
          "false_positives": sorted(" · ".join(k) for k in flagged - want),
@@ -71,6 +89,9 @@ def metrics(res: dict, labels: dict, audit: list[dict]) -> tuple[dict, list[dict
          "proposed": sorted(x["id"] for x in recs if x["status"] == "proposed"),
          "suppressed": sorted(x["id"] for x in recs if x["status"] == "suppressed"),
          "realised_error_max": round(max(real_err.values()), 3) if real_err else 0.0,
+         "daily_lags": lags, "daily_lag_max": max(lags.values()) if lags else 0,
+         "daily_false_alerts": len(false_alerts), "daily_false_alert_list": false_alerts,
+         "commitments_match": got_c == want_c if want_c else True,
          "not_flagged_ok": not any((r, li) in quiet for r, li, _ in flagged),
          "unallocated_match": res["kpis"]["unallocated_resources"] == sorted(labels.get("unallocated_resources", [])),
          "rejected_drafts": len(res["rejected_drafts"]),
@@ -103,6 +124,10 @@ def evaluate(inp: FinOpsInputs, r: Rules, drafter, gates: dict, labels: dict, wo
            f"- Suppressed after rejection match labels: {tick(m['suppressed_match'])} "
            f"({', '.join(m['suppressed']) or 'none'})",
            f"- Unallocated resources match labels: {tick(m['unallocated_match'])}",
+           f"- Commitments flagged as underused or ending match labels: {tick(m['commitments_match'])}",
+           "- Daily alerts: " + ("; ".join(f"{k} raised {v} day(s) after onset" for k, v in m["daily_lags"].items())
+                                 or "none labelled") + f". Outside a labelled anomaly: "
+           f"{', '.join(m['daily_false_alert_list']) or 'none'}.",
            f"- Deliberately not flagged: {tick(m['not_flagged_ok'])} {quiet or 'none listed'}. "
            f"False positives: {', '.join(m['false_positives']) or 'none'}. Missed: {', '.join(m['missed']) or 'none'}.",
            "", "| Anomaly | Expected cause | Got | |", "|---|---|---|---|"]

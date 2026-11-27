@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cost by Team</title>
+<style>
+:root { --bg:#F3F4F0; --surface:#FCFCFA; --surface-2:#ECEFEA; --ink:#0F1B2D; --muted:#56637A; --line:#DCE0E3;
+  --accent:#B4481A; --accent-soft:#F8E3D6; --blue:#2A5DB0; --blue-soft:#E1E9F7; --ok:#2E7D4F; --ok-soft:#DDF0E4;
+  --warn:#9A6200; --warn-soft:#F6EAD0; --crit:#B42318; --crit-soft:#F8DEDA;
+  --shadow:0 1px 2px rgba(15,27,45,.06),0 4px 16px rgba(15,27,45,.05);
+  --f-display:'Space Grotesk','Segoe UI',Arial,sans-serif; --f-body:'IBM Plex Sans','Segoe UI',Arial,sans-serif;
+  --f-mono:'JetBrains Mono',Consolas,'Courier New',monospace; color-scheme: light; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg:#0B1422; --surface:#111C2D; --surface-2:#172438; --ink:#E8ECF1; --muted:#98A6BA; --line:#24344C;
+  --accent:#F08A4B; --accent-soft:#3A2416; --blue:#7AA5F2; --blue-soft:#1B2B47; --ok:#5BC48A; --ok-soft:#14301F;
+  --warn:#E3AA45; --warn-soft:#33270F; --crit:#F27D73; --crit-soft:#3A1714; --shadow:0 1px 2px rgba(0,0,0,.3);
+  color-scheme: dark; } }
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--ink); font-family:var(--f-body); font-size:14px; line-height:1.5; }
+main { max-width:1440px; margin:0 auto; padding:24px 24px 48px; }
+h1,h2,h3 { font-family:var(--f-display); margin:0; letter-spacing:-0.01em; }
+h1 { font-size:28px; } h2 { font-size:16px; } h3 { font-size:14px; }
+.eyebrow { font-family:var(--f-mono); font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); }
+.sub { color:var(--muted); } .mono { font-family:var(--f-mono); font-size:12px; }
+header { display:flex; justify-content:space-between; gap:16px; align-items:flex-end; flex-wrap:wrap; margin-bottom:20px; }
+header p { margin:6px 0 0; max-width:760px; }
+.badges { display:flex; gap:8px; flex-wrap:wrap; }
+.badge { display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; font-weight:600; white-space:nowrap; }
+.b-ok { background:var(--ok-soft); color:var(--ok); } .b-warn { background:var(--warn-soft); color:var(--warn); }
+.b-crit { background:var(--crit-soft); color:var(--crit); } .b-blue { background:var(--blue-soft); color:var(--blue); }
+.b-neutral { background:var(--surface-2); color:var(--muted); } .b-accent { background:var(--accent-soft); color:var(--accent); }
+.grid { display:grid; gap:16px; margin-bottom:16px; }
+.g-flow { grid-template-columns:minmax(0,4fr) auto minmax(0,8fr); align-items:stretch; }
+.g-two { grid-template-columns:minmax(0,7fr) minmax(0,5fr); }
+@media (max-width: 960px) { .g-flow, .g-two { grid-template-columns:minmax(0,1fr); } .arrow { transform:rotate(90deg); } }
+.panel { background:var(--surface); border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow); padding:16px 18px; min-width:0; }
+.panel-h { display:flex; justify-content:space-between; align-items:baseline; gap:12px; margin-bottom:10px; }
+.arrow { align-self:center; color:var(--accent); font-size:28px; font-family:var(--f-display); text-align:center; }
+.arrow small { display:block; font-size:11px; color:var(--muted); font-family:var(--f-mono); }
+.stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin:10px 0 12px; }
+.stat { background:var(--surface-2); border-radius:8px; padding:8px 10px; }
+.stat b { display:block; font-family:var(--f-display); font-size:20px; }
+.stat span { font-size:12px; color:var(--muted); }
+table { width:100%; border-collapse:collapse; }
+th { text-align:left; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); font-weight:600; padding:6px 8px; border-bottom:1px solid var(--line); }
+td { padding:6px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+tr:last-child td { border-bottom:0; }
+.scroll { overflow-x:auto; }
+td.mono { white-space:nowrap; }
+.diagram { background:var(--surface-2); border-radius:10px; padding:12px; overflow-x:auto; }
+.diagram pre.mermaid { margin:0; text-align:center; font-family:var(--f-mono); font-size:12px; }
+ul.clean { margin:6px 0 0; padding-left:18px; } ul.clean li { margin:3px 0; }
+.note { border-left:3px solid var(--warn); background:var(--warn-soft); color:var(--ink); padding:8px 12px; border-radius:6px; margin-top:10px; font-size:13px; }
+.story { border-top:1px solid var(--line); padding:10px 0; } .story:first-of-type { border-top:0; }
+footer { color:var(--muted); font-size:12px; margin-top:24px; }
+
+.g-5 { grid-template-columns:repeat(5,minmax(0,1fr)); }
+.g-main { grid-template-columns:minmax(0,7fr) minmax(0,5fr); }
+@media (max-width: 1100px) { .g-5 { grid-template-columns:repeat(2,minmax(0,1fr)); } .g-main { grid-template-columns:minmax(0,1fr); } }
+.kpi .label { color:var(--muted); font-size:12px; }
+.kpi .value { display:block; font-family:var(--f-display); font-size:28px; font-weight:600; margin:2px 0; }
+.kpi .delta { font-size:13px; } .kpi .src { display:block; color:var(--muted); font-size:11px; font-family:var(--f-mono); margin-top:6px; }
+.up-bad { color:var(--crit); } .ok-txt { color:var(--ok); }
+td.num, th.num { text-align:right; font-family:var(--f-mono); white-space:nowrap; }
+tr.total td { font-weight:600; border-top:1px solid var(--line); }
+.formula { font-family:var(--f-mono); font-size:12px; background:var(--surface-2); border-radius:8px; padding:8px 12px; margin:12px 0; color:var(--muted); }
+.legend { display:flex; flex-wrap:wrap; gap:6px 14px; font-size:12px; color:var(--muted); margin:2px 0 6px; }
+.legend i { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:6px; vertical-align:-1px; }
+.legend i.fc { background:transparent !important; border:1.5px dashed var(--muted); }
+.viz { --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s0:#A3A9B3; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .viz { --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s0:#5B6880; } }
+svg.chart { width:100%; height:auto; display:block; }
+svg.chart text { font-family:var(--f-mono); font-size:11px; fill:var(--muted); }
+svg.chart text.val { fill:var(--ink); font-weight:600; }
+svg.chart .grid { stroke:var(--line); stroke-width:1; }
+svg.chart .seg:hover { opacity:.8; }
+svg.chart .fc { opacity:.45; }
+svg.chart .fc-outline { fill:none; stroke:var(--muted); stroke-dasharray:4 3; stroke-width:1.5; }
+.anomaly { border-top:1px solid var(--line); padding:12px 0; } .anomaly:first-of-type { border-top:0; padding-top:0; }
+.anomaly p { margin:6px 0; }
+.spark rect.base { fill:var(--muted); opacity:.45; } .spark rect.hit { fill:var(--crit); }
+.spark line { stroke:var(--muted); stroke-dasharray:3 3; stroke-width:1; }
+.spark text { font-family:var(--f-mono); font-size:10px; fill:var(--muted); }
+details summary { cursor:pointer; color:var(--muted); font-size:12px; margin-top:8px; }
+
+.controls { display:flex; flex-wrap:wrap; gap:10px 18px; align-items:flex-end; }
+.controls label { display:flex; flex-direction:column; gap:4px; font-size:12px; color:var(--muted); }
+.controls select, .controls input[type=number] { font:inherit; font-size:13px; padding:6px 8px; border-radius:8px;
+  border:1px solid var(--line); background:var(--surface); color:var(--ink); }
+.chips { display:flex; flex-wrap:wrap; gap:6px; }
+.chip { font-size:12px; padding:4px 10px; border-radius:999px; border:1px solid var(--line); background:var(--surface);
+  color:var(--ink); cursor:pointer; }
+.chip[aria-pressed="false"] { opacity:.45; text-decoration:line-through; }
+.btn { font:inherit; font-size:13px; padding:6px 12px; border-radius:8px; border:1px solid var(--line);
+  background:var(--surface-2); color:var(--ink); cursor:pointer; }
+.btn:hover { border-color:var(--muted); }
+.fixed-grid { display:flex; flex-wrap:wrap; gap:8px; }
+.fixed-grid input { width:70px; }
+td input.budget { width:96px; text-align:right; font-family:var(--f-mono); }
+.bar { height:6px; border-radius:3px; background:var(--surface-2); position:relative; margin-top:4px; min-width:90px; }
+.bar i { position:absolute; left:0; top:0; bottom:0; border-radius:3px; background:var(--ok); }
+.bar i.over { background:var(--crit); } .bar i.near { background:var(--warn); }
+pre.cfg { font-family:var(--f-mono); font-size:12px; background:var(--surface-2); padding:10px 12px; border-radius:8px;
+  white-space:pre-wrap; }
+.g-4 { grid-template-columns:repeat(4,minmax(0,1fr)); }
+@media (max-width: 900px) { .g-4 { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+
+.viz { --s5:#7c6fd6; } i.dot { display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:8px; }
+</style></head>
+<body><main class="viz">
+<header><div><div class="eyebrow">FinOps · cost by team</div><h1>Cost by team</h1>
+<p class="sub">As of 2026-11-17 · cost export <span class="mono">focus</span> · Nov 2026 to date (run-rate from 16 of 30 days). Every figure is a sum of
+cost export lines. Customise the view below; your settings stay in this browser, and "Copy as configuration" makes them the
+default for everyone.</p></div></header>
+<section class="panel"><div class="controls">
+<label>View<select id="view"></select></label>
+<label>Cost basis<select id="basis"></select></label>
+<label>From<select id="from"></select></label>
+<label>To<select id="to"></select></label>
+<label>Shared costs<select id="split"></select></label>
+<label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" id="unshared"> Treat unallocated as shared</label>
+<button class="btn" id="reset" type="button">Reset</button>
+<button class="btn" id="csv" type="button">Download CSV</button>
+</div>
+<div class="controls" style="margin-top:12px"><div><div class="sub" style="font-size:12px;margin-bottom:4px">Environments</div><div class="chips" id="envs"></div></div>
+<div><div class="sub" style="font-size:12px;margin-bottom:4px">Categories</div><div class="chips" id="cats"></div></div></div>
+<div id="fixed" hidden style="margin-top:12px"><div class="sub" style="font-size:12px;margin-bottom:4px">Fixed split (percent; normalised to 100)</div><div class="fixed-grid controls"></div></div>
+</section>
+<div class="grid g-4" id="kpis"></div>
+<section class="panel"><div class="panel-h"><h2>Monthly cost by team</h2><span class="sub mono">USD</span></div><div id="chart"></div>
+<div class="scroll"><table id="table"></table></div><p class="sub mono">* partial month: month to date; Fcst is its run-rate forecast. Budgets are monthly and editable.</p></section>
+<section class="panel"><div class="panel-h"><h2>Tagging agent</h2><span class="sub">proposals only · nothing is tagged until the owning team applies it</span></div><div id="tagging"></div></section>
+<section class="panel"><div class="panel-h"><h2>Copy as configuration</h2><span class="sub">make these settings the default</span></div><pre class="cfg" id="cfg"></pre></section>
+<footer>Generated by Engineering Command Centre · use case 5 · synthetic data · Author: Pradeep Sahoo</footer>
+</main>
+<script type="application/json" id="data">{"months": ["2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06", "2026-07", "2026-08", "2026-09", "2026-10", "2026-11"], "complete": ["2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06", "2026-07", "2026-08", "2026-09", "2026-10"], "partial": "2026-11", "scale": 1.875, "run_rate": "run-rate from 16 of 30 days", "rows": [{"m": "2026-01", "r": "RI-membership-db", "c": "Databases", "e": "prod", "a": 1019.28, "b": 5095.89}, {"m": "2026-01", "r": "order-service-nodes", "c": "Compute", "e": "prod", "a": 21026.59, "b": 21026.59}, {"m": "2026-01", "r": "order-service-db", "c": "Databases", "e": "prod", "a": 8992.27, "b": 8992.27}, {"m": "2026-01", "r": "partner-gateway-egress", "c": "Networking", "e": "prod", "a": 5708.6, "b": 5708.6}, {"m": "2026-01", "r": "commerce-staging-nodes", "c": "Compute", "e": "staging", "a": 4259.7, "b": 4259.7}, {"m": "2026-01", "r": "loyalty-ledger-db", "c": "Databases", "e": "prod", "a": 13898.18, "b": 13898.18}, {"m": "2026-01", "r": "loyalty-ledger-db", "c": "Storage", "e": "prod", "a": 16876.18, "b": 16876.18}, {"m": "2026-01", "r": "promotion-engine-nodes", "c": "Compute", "e": "prod", "a": 8115.3, "b": 8115.3}, {"m": "2026-01", "r": "membership-api-nodes", "c": "Compute", "e": "prod", "a": 12071.71, "b": 12071.71}, {"m": "2026-01", "r": "membership-db", "c": "Databases", "e": "prod", "a": 4076.81, "b": 0.0}, {"m": "2026-01", "r": "membership-orphan-volumes", "c": "Storage", "e": "prod", "a": 900.0, "b": 900.0}, {"m": "2026-01", "r": "platform-sandbox-cluster", "c": "Compute", "e": "sandbox", "a": 4916.78, "b": 4916.78}, {"m": "2026-01", "r": "notification-worker-nodes", "c": "Compute", "e": "prod", "a": 3933.14, "b": 3933.14}, {"m": "2026-01", "r": "platform-logging", "c": "Management and Governance", "e": "prod", "a": 5780.4, "b": 5780.4}, {"m": "2026-01", "r": "shared-nat-gateway", "c": "Networking", "e": "untagged", "a": 3013.71, "b": 3013.71}, {"m": "2026-01", "r": "loyalty-cache", "c": "Databases", "e": "untagged", "a": 2416.59, "b": 2416.59}, {"m": "2026-01", "r": "search-indexer-nodes", "c": "Compute", "e": "untagged", "a": 3160.61, "b": 3160.61}, {"m": "2026-01", "r": "membership-api-alb", "c": "Networking", "e": "prod", "a": 1207.47, "b": 1207.47}, {"m": "2026-01", "r": "dev-test-vm-7", "c": "Compute", "e": "untagged", "a": 609.9, "b": 609.9}, {"m": "2026-02", "r": "RI-membership-db", "c": "Databases", "e": "prod", "a": 920.64, "b": 4602.74}, {"m": "2026-02", "r": "order-service-nodes", "c": "Compute", "e": "prod", "a": 21085.85, "b": 21085.85}, {"m": "2026-02", "r": "order-service-db", "c": "Databases", "e": "prod", "a": 8739.68, "b": 8739.68}, {"m": "2026-02", "r": "partner-gateway-egress", "c": "Networking", "e": "prod", "a": 6140.04, "b": 6140.04}, {"m": "2026-02", "r": "commerce-staging-nodes", "c": "Compute", "e": "staging", "a": 4229.67, "b": 4229.67}, {"m": "2026-02", "r": "loyalty-ledger-db", "c": "Databases", "e": "prod", "a": 14182.12, "b": 14182.12}, {"m": "2026-02", "r": "loyalty-ledger-db", "c": "Storage", "e": "prod", "a": 17247.08, "b": 17247.08}, {"m": "2026-02", "r": "promotion-engine-nodes", "c": "Compute", "e": "prod", "a": 7783.11, "b": 7783.11}, {"m": "2026-02", "r": "membership-api-nodes", "c": "Compute", "e": "prod", "a": 12027.28, "b": 12027.28}, {"m": "2026-02", "r": "membership-db", "c": "Databases", "e": "prod", "a": 3682.28, "b": 0.0}, {"m": "2026-02", "r": "membership-orphan-volumes", "c": "Storage", "e": "prod", "a": 900.0, "b": 900.0}, {"m": "2026-02", "r": "platform-sandbox-cluster", "c": "Compute", "e": "sandbox", "a": 5046.0, "b": 5046.0}, {"m": "2026-02", "r": "notification-worker-nodes", "c": "Compute", "e": "prod", "a": 3949.3, "b": 3949.3}, {"m": "2026-02", "r": "platform-logging", "c": "Management and Governance", "e": "prod", "a": 5892.92, "b": 5892.92}, {"m": "2026-02", "r": "shared-nat-gateway", "c": "Networking", "e": "untagged", "a": 2966.28, "b": 2966.28}, {"m": "2026-02", "r": "loyalty-cache", "c": "Databases", "e": "untagged", "a": 2360.11, "b": 2360.11}, {"m": "2026-02", "r": "search-indexer-nodes", "c": "Compute", "e": "untagged", "a": 3118.41, "b": 3118.41}, {"m": "2026-02", "r": "membership-api-alb", "c": "Networking", "e": "prod", "a": 1193.94, "b": 1193.94}, {"m": "2026-02", "r": "dev-test-vm-7", "c": "Compute", "e": "untagged", "a": 604.36, "b": 604.36}, {"m": "2026-03", "r": "RI-order-service-db", "c": "Databases", "e": "prod", "a": 0.0, "b": 72000.0}, {"m": "2026-03", "r": "RI-membership-db", "c": "Databases", "e": "prod", "a": 1019.28, "b": 5095.89}, {"m": "2026-03", "r": "order-service-nodes", "c": "Compute", "e": "prod", "a": 21934.7, "b": 21934.7}, {"m": "2026-03", "r": "order-service-db", "c": "Databases", "e": "prod", "a": 6115.06, "b": 0.0}, {"m": "2026-03", "r": "partner-gateway-egress", "c": "Networking", "e": "prod", "a": 6238.64, "b": 6238.64}, {"m": "2026-03", "r": "commerce-staging-nodes", "c": "Compute", "e": "staging", "a": 4166.95, "b": 4166.95}, {"m": "2026-03", "r": "loyalty-ledger-db", "c": "Databases", "e": "prod", "a": 13860.79, "b": 13860.79}, {"m": "2026-03", "r": "loyalty-ledger-db", "c": "Storage", "e": "prod", "a": 17203.24, "b": 17203.24}, {"m": "2026-03", "r": "promotion-engine-nodes", "c": "Compute", "e": "prod", "a": 7831.0, "b": 7831.0}, {"m": "2026-03", "r": "membership-api-nodes", "c": "Compute", "e": "prod", "a": 12128.73, "b": 12128.73}, {"m": "2026-03", "r": "membership-db", "c": "Databases", "e": "prod", "a": 4076.81, "b": 0.0}, {"m": "2026-03", "r": "membership-orphan-volumes", "c": "Storage", "e": "prod", "a": 900.0, "b": 900.0}, {"m": "2026-03", "r": "platform-sandbox-cluster", "c": "Compute", "e": "sandbox", "a": 5206.88, "b": 5206.88}, {"m": "2026-03", "r": "notification-worker-nodes", "c": "Compute", "e": "prod", "a": 3924.03, "b": 3924.03}, {"m": "2026-03", "r": "platform-logging", "c": "Management and Governance", "e": "prod", "a": 5822.46, "b": 5822.46}, {"m": "2026-03", "r": "shared-nat-gateway", "c": "Networking", "e": "untagged", "a": 2986.27, "b": 2986.27}, {"m": "2026-03", "r": "loyalty-cache", "c": "Databases", "e": "untagged", "a": 2381.93, "b": 2381.93}, {"m": "2026-03", "r": "search-indexer-nodes", "c": "Compute", "e": "untagged", "a": 3109.57, "b": 3109.57}, {"m": "2026-03", "r": "membership-api-alb", "c": "Networking", "e": "prod", "a": 1210.22, "b": 1210.22}, {"m": "2026-03", "r": "dev-test-vm-7", "c": "Compute", "e": "untagged", "a": 582.82, "b": 582.82}, {"m": "2026-04", "r": "RI-membership-db", "c": "Databases", "e": "prod", "a": 986.4, "b": 4931.51}, {"m": "2026-04", "r": "order-service-nodes", "c": "Compute", "e": "prod", "a": 21958.42, "b": 21958.42}, {"m": "2026-04", "r": "order-service-db", "c": "Databases", "e": "prod", "a": 5917.8, "b": 0.0}, {"m": "2026-04", "r": "partner-gateway-egress", "c": "Networking", "e": "prod", "a": 5847.18, "b": 5847.18}, {"m": "2026-04", "r": "commerce-staging-nodes", "c": "Compute", "e": "staging", "a": 4226.48, "b": 4226.48}, {"m": "2026-04", "r": "loyalty-ledger-db", "c": "Databases", "e": "prod", "a": 14040.47, "b": 14040.47}, {"m": "2026-04", "r": "loyalty-ledger-db", "c": "Storage", "e": "prod", "a": 16971.91, "b": 16971.91}, {"m": "2026-04", "r": "promotion-engine-nodes", "c": "Compute", "e": "prod", "a": 7938.43, "b": 7938.43}, {"m": "2026-04", "r": "membership-api-nodes", "c": "Compute", "e": "prod", "a": 12134.82, "b": 12134.82}, {"m": "2026-04", "r": "membership-db", "c": "Databases", "e": "prod", "a": 3945.3, "b": 0.0}, {"m": "2026-04", "r": "membership-orphan-volumes", "c": "Storage", "e": "prod", "a": 900.0, "b": 900.0}, {"m": "2026-04", "r": "platform-sandbox-cluster", "c": "Compute", "e": "sandbox", "a": 5009.96, "b": 5009.96}, {"m": "2026-04", "r": "notification-worker-nodes", "c": "Compute", "e": "prod", "a": 4057.88, "b": 4057.88}, {"m": "2026-04", "r": "platform-logging", "c": "Management and Governance", "e": "prod", "a": 6052.57, "b": 6052.57}, {"m": "2026-04", "r": "shared-nat-gateway", "c": "Networking", "e": "untagged", "a": 3044.8, "b": 3044.8}, {"m": "2026-04", "r": "loyalty-cache", "c": "Databases", "e": "untagged", "a": 2401.23, "b": 2401.23}, {"m": "2026-04", "r": "search-indexer-nodes", "c": "Compute", "e": "untagged", "a": 3124.55, "b": 3124.55}, {"m": "2026-04", "r": "membership-api-alb", "c": "Networking", "e": "prod", "a": 1178.65, "b": 1178.65}, {"m": "2026-04", "r": "dev-test-vm-7", "c": "Compute", "e": "untagged", "a": 593.04, "b": 593.04}, {"m": "2026-05", "r": "RI-membership-db", "c": "Databases", "e": "prod", "a": 1019.28, "b": 5095.89}, {"m": "2026-05", "r": "order-service-nodes", "c": "Compute", "e": "prod", "a": 21865.99, "b": 21865.99}, {"m": "2026-05", "r": "order-service-db", "c": "Databases", "e": "prod", "a": 6115.06, "b": 0.0}, {"m": "2026-05", "r": "partner-gateway-egress", "c": "Networking", "e": "prod", "a": 6113.03, "b": 6113.03}, {"m": "2026-05", "r": "commerce-staging-nodes", "c": "Compute", "e": "staging", "a": 4136.75, "b": 4136.75}, {"m": "2026-05", "r": "loyalty-ledger-db", "c": "Databases", "e": "prod", "a": 14150.56, "b": 14150.56}, {"m": "2026-05", "r": "loyalty-ledger-db", "c": "Storage", "e": "prod", "a": 17202.46, "b": 17202.46}, {"m": "2026-05", "r": "promotion-engine-nodes", "c": "Compute", "e": "prod", "a": 7789.16, "b": 7789.16}, {"m": "2026-05", "r": "membership-api-nodes", "c": "Compute", "e": "prod", "a": 11949.98, "b": 11949.98}, {"m": "2026-05", "r": "membership-db", "c": "Databases", "e": "prod", "a": 4076.81, "b": 0.0}, {"m": "2026-05", "r": "membership-orphan-volumes", "c": "Storage", "e": "prod", "a": 900.0, "b": 900.0}, {"m": "2026-05", "r": "platform-sandbox-cluster", "c": "Compute", "e": "sandbox", "a": 4994.98, "b": 4994.98}, {"m": "2026-05", "r": "notification-worker-nodes", "c": "Compute", "e": "prod", "a": 3936.73, "b": 3936.73}, {"m": "2026-05", "r": "platform-logging", "c": "Management and Governance", "e": "prod", "a": 6031.15, "b": 6031.15}, {"m": "2026-05", "r": "shared-nat-gateway", "c": "Networking", "e": "untagged", "a": 3127.67, "b": 3127.67}, {"m": "2026-05", "r": "loyalty-cache", "c": "Databases", "e": "untagged", "a": 2448.16, "b": 2448.16}, {"m": "2026-05", "r": "search-indexer-nodes", "c": "Compute", "e": "untagged", "a": 3053.91, "b": 3053.91}, {"m": "2026-05", "r": "membership-api-alb", "c": "Networking", "e": "prod", "a": 1216.79, "b": 1216.79}, {"m": "2026-05", "r": "dev-test-vm-7", "c": "Compute", "e": "untagged", "a": 599.46, "b": 599.46}, {"m": "2026-06", "r": "RI-membership-db", "c": "Databases", "e": "prod", "a": 986.4, "b": 4931.51}, {"m": "2026-06", "r": "order-service-nodes", "c": "Compute", "e": "prod", "a": 22945.74, "b": 22945.74}, {"m": "2026-06", "r": "order-service-db", "c": "Databases", "e": "prod", "a": 5917.8, "b": 0.0}, {"m": "2026-06", "r": "partner-gateway-egress", "c": "Networking", "e": "prod", "a": 5914.54, "b": 5914.54}, {"m": "2026-06", "r": "commerce-staging-nodes", "c": "Compute", "e": "staging", "a": 4206.46, "b": 4206.46}, {"m": "2026-06", "r": "loyalty-ledger-db", "c": "Databases", "e": "prod", "a": 13719.66, "b": 13719.66}, {"m": "2026-06", "r": "loyalty-ledger-db", "c": "Storage", "e": "prod", "a": 17751.28, "b": 17751.28}, {"m": "2026-06", "r": "promotion-engine-nodes", "c": "Compute", "e": "prod", "a": 8014.5, "b": 8014.5}, {"m": "2026-06", "r": "membership-api-nodes", "c": "Compute", "e": "prod", "a": 11753.64, "b": 11753.64}, {"m": "2026-06", "r": "membership-db", "c": "Databases", "e": "prod", "a": 3945.3, "b": 0.0}, {"m": "2026-06", "r": "membership-orphan-volumes", "c": "Storage", "e": "prod", "a": 900.0, "b": 900.0}, {"m": "2026-06", "r": "platform-sandbox-cluster", "c": "Compute", "e": "sandbox", "a": 4879.93, "b": 4879.93}, {"m": "2026-06", "r": "notification-worker-nodes", "c": "Compute", "e": "prod", "a": 4086.6, "b": 4086.6}, {"m": "2026-06", "r": "platform-logging", "c": "Management and Governance", "e": "prod", "a": 6011.05, "b": 6011.05}, {"m": "2026-06", "r": "shared-nat-gateway", "c": "Networking", "e": "untagged", "a": 2953.28, "b": 2953.28}, {"m": "2026-06", "r": "loyalty-cache", "c": "Databases", "e": "untagged", "a": 2473.02, "b": 2473.02}, {"m": "2026-06", "r": "search-indexer-nodes", "c": "Compute", "e": "untagged", "a": 3127.63, "b": 3127.63}, {"m": "2026-06", "r": "membership-api-alb", "c": "Networking", "e": "prod", "a": 1224.18, "b": 1224.18}, {"m": "2026-06", "r": "dev-test-vm-7", "c": "Compute", "e": "untagged", "a": 597.07, "b": 597.07}, {"m": "2026-07", "r": "RI-membership-db", "c": "Databases", "e": "prod", "a": 1019.28, "b": 5095.89}, {"m": "2026-07", "r": "order-service-nodes", "c": "Compute", "e": "prod", "a": 22445.61, "b": 22445.61}, {"m": "2026-07", "r": "order-service-db", "c": "Databases", "e": "prod", "a": 6115.06, "b": 0.0}, {"m": "2026-07", "r": "partner-gateway-egress", "c": "Networking", "e": "prod", "a": 6075.77, "b": 6075.77}, {"m": "2026-07", "r": "commerce-staging-nodes", "c": "Compute", "e": "staging", "a": 4236.42, "b": 4236.42}, {"m": "2026-07", "r": "loyalty-ledger-db", "c": "Databases", "e": "prod", "a": 14109.95, "b": 14109.95}, {"m": "2026-07", "r": "loyalty-ledger-db", "c": "Storage", "e": "prod", "a": 17482.61, "b": 17482.61}, {"m": "2026-07", "r": "promotion-engine-nodes", "c": "Compute", "e": "prod", "a": 8153.89, "b": 8153.89}, {"m": "2026-07", "r": "membership-api-nodes", "c": "Compute", "e": "prod", "a": 11974.51, "b": 11974.51}, {"m": "2026-07", "r": "membership-db", "c": "Databases", "e": "prod", "a": 4076.81, "b": 0.0}, {"m": "2026-07", "r": "membership-orphan-volumes", "c": "Storage", "e": "prod", "a": 900.0, "b": 900.0}, {"m": "2026-07", "r": "platform-sandbox-cluster", "c": "Compute", "e": "sandbox", "a": 5035.5, "b": 5035.5}, {"m": "2026-07", "r": "notification-worker-nodes", "c": "Compute", "e": "prod", "a": 3958.49, "b": 3958.49}, {"m": "2026-07", "r": "platform-logging", "c": "Management and Governance", "e": "prod", "a": 5959.46, "b": 5959.46}, {"m": "2026-07", "r": "shared-nat-gateway", "c": "Networking", "e": "untagged", "a": 3014.07, "b": 3014.07}, {"m": "2026-07", "r": "loyalty-cache", "c": "Databases", "e": "untagged", "a": 2407.18, "b": 2407.18}, {"m": "2026-07", "r": "search-indexer-nodes", "c": "Compute", "e": "untagged", "a": 3108.83, "b": 3108.83}, {"m": "2026-07", "r": "membership-api-alb", "c": "Networking", "e": "prod", "a": 1175.63, "b": 1175.63}, {"m": "2026-07", "r": "dev-test-vm-7", "c": "Compute", "e": "untagged", "a": 629.58, "b": 629.58}, {"m": "2026-08", "r": "RI-membership-db", "c": "Databases", "e": "prod", "a": 1019.28, "b": 5095.89}, {"m": "2026-08", "r": "order-service-nodes", "c": "Compute", "e": "prod", "a": 23312.37, "b": 23312.37}, {"m": "2026-08", "r": "order-service-db", "c": "Databases", "e": "prod", "a": 6115.06, "b": 0.0}, {"m": "2026-08", "r": "partner-gateway-egress", "c": "Networking", "e": "prod", "a": 6640.51, "b": 6640.51}, {"m": "2026-08", "r": "commerce-staging-nodes", "c": "Compute", "e": "staging", "a": 4361.36, "b": 4361.36}, {"m": "2026-08", "r": "loyalty-ledger-db", "c": "Databases", "e": "prod", "a": 13658.33, "b": 13658.33}, {"m": "2026-08", "r": "loyalty-ledger-db", "c": "Storage", "e": "prod", "a": 17229.8, "b": 17229.8}, {"m": "2026-08", "r": "promotion-engine-nodes", "c": "Compute", "e": "prod", "a": 8080.33, "b": 8080.33}, {"m": "2026-08", "r": "membership-api-nodes", "c": "Compute", "e": "prod", "a": 11959.51, "b": 11959.51}, {"m": "2026-08", "r": "membership-db", "c": "Databases", "e": "prod", "a": 4076.81, "b": 0.0}, {"m": "2026-08", "r": "membership-orphan-volumes", "c": "Storage", "e": "prod", "a": 900.0, "b": 900.0}, {"m": "2026-08", "r": "platform-sandbox-cluster", "c": "Compute", "e": "sandbox", "a": 2296.32, "b": 2296.32}, {"m": "2026-08", "r": "notification-worker-nodes", "c": "Compute", "e": "prod", "a": 4030.61, "b": 4030.61}, {"m": "2026-08", "r": "platform-logging", "c": "Management and Governance", "e": "prod", "a": 6095.56, "b": 6095.56}, {"m": "2026-08", "r": "shared-nat-gateway", "c": "Networking", "e": "untagged", "a": 2971.44, "b": 2971.44}, {"m": "2026-08", "r": "loyalty-cache", "c": "Databases", "e": "untagged", "a": 2461.33, "b": 2461.33}, {"m": "2026-08", "r": "search-indexer-nodes", "c": "Compute", "e": "untagged", "a": 3167.65, "b": 3167.65}, {"m": "2026-08", "r": "membership-api-alb", "c": "Networking", "e": "prod", "a": 1217.14, "b": 1217.14}, {"m": "2026-08", "r": "dev-test-vm-7", "c": "Compute", "e": "untagged", "a": 587.49, "b": 587.49}, {"m": "2026-09", "r": "RI-membership-db", "c": "Databases", "e": "prod", "a": 986.4, "b": 4931.51}, {"m": "2026-09", "r": "order-service-nodes", "c": "Compute", "e": "prod", "a": 20919.01, "b": 20919.01}, {"m": "2026-09", "r": "order-service-db", "c": "Databases", "e": "prod", "a": 5917.8, "b": 0.0}, {"m": "2026-09", "r": "partner-gateway-egress", "c": "Networking", "e": "prod", "a": 5945.99, "b": 5945.99}, {"m": "2026-09", "r": "commerce-staging-nodes", "c": "Compute", "e": "staging", "a": 4208.3, "b": 4208.3}, {"m": "2026-09", "r": "loyalty-ledger-db", "c": "Databases", "e": "prod", "a": 14086.1, "b": 14086.1}, {"m": "2026-09", "r": "loyalty-ledger-db", "c": "Storage", "e": "prod", "a": 17264.28, "b": 17264.28}, {"m": "2026-09", "r": "promotion-engine-nodes", "c": "Compute", "e": "prod", "a": 7852.59, "b": 7852.59}, {"m": "2026-09", "r": "membership-api-nodes", "c": "Compute", "e": "prod", "a": 11884.3, "b": 11884.3}, {"m": "2026-09", "r": "membership-db", "c": "Databases", "e": "prod", "a": 3945.3, "b": 0.0}, {"m": "2026-09", "r": "membership-orphan-volumes", "c": "Storage", "e": "prod", "a": 900.0, "b": 900.0}, {"m": "2026-09", "r": "platform-sandbox-cluster", "c": "Compute", "e": "sandbox", "a": 2286.09, "b": 2286.09}, {"m": "2026-09", "r": "notification-worker-nodes", "c": "Compute", "e": "prod", "a": 4034.03, "b": 4034.03}, {"m": "2026-09", "r": "platform-logging", "c": "Management and Governance", "e": "prod", "a": 5955.04, "b": 5955.04}, {"m": "2026-09", "r": "shared-nat-gateway", "c": "Networking", "e": "untagged", "a": 3033.48, "b": 3033.48}, {"m": "2026-09", "r": "loyalty-cache", "c": "Databases", "e": "untagged", "a": 2420.6, "b": 2420.6}, {"m": "2026-09", "r": "search-indexer-nodes", "c": "Compute", "e": "untagged", "a": 3147.16, "b": 3147.16}, {"m": "2026-09", "r": "membership-api-alb", "c": "Networking", "e": "prod", "a": 1231.43, "b": 1231.43}, {"m": "2026-09", "r": "dev-test-vm-7", "c": "Compute", "e": "untagged", "a": 602.88, "b": 602.88}, {"m": "2026-10", "r": "RI-membership-db", "c": "Databases", "e": "prod", "a": 1019.28, "b": 5095.89}, {"m": "2026-10", "r": "order-service-nodes", "c": "Compute", "e": "prod", "a": 23797.27, "b": 23797.27}, {"m": "2026-10", "r": "order-service-db", "c": "Databases", "e": "prod", "a": 6115.06, "b": 0.0}, {"m": "2026-10", "r": "partner-gateway-egress", "c": "Networking", "e": "prod", "a": 5938.64, "b": 5938.64}, {"m": "2026-10", "r": "commerce-staging-nodes", "c": "Compute", "e": "staging", "a": 4181.49, "b": 4181.49}, {"m": "2026-10", "r": "loyalty-ledger-db", "c": "Databases", "e": "prod", "a": 13620.66, "b": 13620.66}, {"m": "2026-10", "r": "loyalty-ledger-db", "c": "Storage", "e": "prod", "a": 23030.33, "b": 23030.33}, {"m": "2026-10", "r": "promotion-engine-nodes", "c": "Compute", "e": "prod", "a": 7745.78, "b": 7745.78}, {"m": "2026-10", "r": "membership-api-nodes", "c": "Compute", "e": "prod", "a": 12110.73, "b": 12110.73}, {"m": "2026-10", "r": "membership-db", "c": "Databases", "e": "prod", "a": 4076.81, "b": 0.0}, {"m": "2026-10", "r": "membership-orphan-volumes", "c": "Storage", "e": "prod", "a": 900.0, "b": 900.0}, {"m": "2026-10", "r": "platform-sandbox-cluster", "c": "Compute", "e": "sandbox", "a": 2287.26, "b": 2287.26}, {"m": "2026-10", "r": "notification-worker-nodes", "c": "Compute", "e": "prod", "a": 3909.55, "b": 3909.55}, {"m": "2026-10", "r": "platform-logging", "c": "Management and Governance", "e": "prod", "a": 5937.82, "b": 5937.82}, {"m": "2026-10", "r": "shared-nat-gateway", "c": "Networking", "e": "untagged", "a": 3000.39, "b": 3000.39}, {"m": "2026-10", "r": "loyalty-cache", "c": "Databases", "e": "untagged", "a": 2415.09, "b": 2415.09}, {"m": "2026-10", "r": "search-indexer-nodes", "c": "Compute", "e": "untagged", "a": 3121.67, "b": 3121.67}, {"m": "2026-10", "r": "membership-api-alb", "c": "Networking", "e": "prod", "a": 1187.96, "b": 1187.96}, {"m": "2026-10", "r": "dev-test-vm-7", "c": "Compute", "e": "untagged", "a": 606.41, "b": 606.41}, {"m": "2026-11", "r": "RI-membership-db", "c": "Databases", "e": "prod", "a": 526.08, "b": 2630.14}, {"m": "2026-11", "r": "order-service-nodes", "c": "Compute", "e": "prod", "a": 13200.39, "b": 13200.39}, {"m": "2026-11", "r": "order-service-db", "c": "Databases", "e": "prod", "a": 3156.16, "b": 0.0}, {"m": "2026-11", "r": "partner-gateway-egress", "c": "Networking", "e": "prod", "a": 3154.99, "b": 3154.99}, {"m": "2026-11", "r": "commerce-staging-nodes", "c": "Compute", "e": "staging", "a": 2257.91, "b": 2257.91}, {"m": "2026-11", "r": "loyalty-ledger-db", "c": "Databases", "e": "prod", "a": 7274.24, "b": 7274.24}, {"m": "2026-11", "r": "loyalty-ledger-db", "c": "Storage", "e": "prod", "a": 13971.18, "b": 13971.18}, {"m": "2026-11", "r": "promotion-engine-nodes", "c": "Compute", "e": "prod", "a": 4347.57, "b": 4347.57}, {"m": "2026-11", "r": "membership-api-nodes", "c": "Compute", "e": "prod", "a": 6447.22, "b": 6447.22}, {"m": "2026-11", "r": "membership-db", "c": "Databases", "e": "prod", "a": 2104.16, "b": 0.0}, {"m": "2026-11", "r": "membership-orphan-volumes", "c": "Storage", "e": "prod", "a": 480.0, "b": 480.0}, {"m": "2026-11", "r": "platform-sandbox-cluster", "c": "Compute", "e": "sandbox", "a": 1230.55, "b": 1230.55}, {"m": "2026-11", "r": "notification-worker-nodes", "c": "Compute", "e": "prod", "a": 2071.94, "b": 2071.94}, {"m": "2026-11", "r": "platform-logging", "c": "Management and Governance", "e": "prod", "a": 5885.04, "b": 5885.04}, {"m": "2026-11", "r": "shared-nat-gateway", "c": "Networking", "e": "untagged", "a": 1523.86, "b": 1523.86}, {"m": "2026-11", "r": "loyalty-cache", "c": "Databases", "e": "untagged", "a": 1240.37, "b": 1240.37}, {"m": "2026-11", "r": "search-indexer-nodes", "c": "Compute", "e": "untagged", "a": 1636.21, "b": 1636.21}, {"m": "2026-11", "r": "membership-api-alb", "c": "Networking", "e": "prod", "a": 649.44, "b": 649.44}, {"m": "2026-11", "r": "dev-test-vm-7", "c": "Compute", "e": "untagged", "a": 316.45, "b": 316.45}], "resources": {"RI-membership-db": {"views": {"today": {"team": "Membership & Identity", "shared": false, "env": "prod"}, "approved": {"team": "Membership & Identity", "shared": false, "env": "prod"}, "proposed": {"team": "Membership & Identity", "shared": false, "env": "prod"}}, "proposal": null, "status": null}, "order-service-nodes": {"views": {"today": {"team": "Commerce", "shared": false, "env": "prod"}, "approved": {"team": "Commerce", "shared": false, "env": "prod"}, "proposed": {"team": "Commerce", "shared": false, "env": "prod"}}, "proposal": null, "status": null}, "order-service-db": {"views": {"today": {"team": "Commerce", "shared": false, "env": "prod"}, "approved": {"team": "Commerce", "shared": false, "env": "prod"}, "proposed": {"team": "Commerce", "shared": false, "env": "prod"}}, "proposal": null, "status": null}, "partner-gateway-egress": {"views": {"today": {"team": "Commerce", "shared": false, "env": "prod"}, "approved": {"team": "Commerce", "shared": false, "env": "prod"}, "proposed": {"team": "Commerce", "shared": false, "env": "prod"}}, "proposal": "TAG-partner-gateway-egress", "status": "proposed"}, "commerce-staging-nodes": {"views": {"today": {"team": "Commerce", "shared": false, "env": "staging"}, "approved": {"team": "Commerce", "shared": false, "env": "staging"}, "proposed": {"team": "Commerce", "shared": false, "env": "staging"}}, "proposal": null, "status": null}, "loyalty-ledger-db": {"views": {"today": {"team": "Loyalty", "shared": false, "env": "prod"}, "approved": {"team": "Loyalty", "shared": false, "env": "prod"}, "proposed": {"team": "Loyalty", "shared": false, "env": "prod"}}, "proposal": null, "status": null}, "promotion-engine-nodes": {"views": {"today": {"team": "Loyalty", "shared": false, "env": "prod"}, "approved": {"team": "Loyalty", "shared": false, "env": "prod"}, "proposed": {"team": "Loyalty", "shared": false, "env": "prod"}}, "proposal": null, "status": null}, "membership-api-nodes": {"views": {"today": {"team": "Membership & Identity", "shared": false, "env": "prod"}, "approved": {"team": "Membership & Identity", "shared": false, "env": "prod"}, "proposed": {"team": "Membership & Identity", "shared": false, "env": "prod"}}, "proposal": null, "status": null}, "membership-db": {"views": {"today": {"team": "Membership & Identity", "shared": false, "env": "prod"}, "approved": {"team": "Membership & Identity", "shared": false, "env": "prod"}, "proposed": {"team": "Membership & Identity", "shared": false, "env": "prod"}}, "proposal": null, "status": null}, "membership-orphan-volumes": {"views": {"today": {"team": "Membership & Identity", "shared": false, "env": "prod"}, "approved": {"team": "Membership & Identity", "shared": false, "env": "prod"}, "proposed": {"team": "Membership & Identity", "shared": false, "env": "prod"}}, "proposal": null, "status": null}, "platform-sandbox-cluster": {"views": {"today": {"team": "Platform", "shared": false, "env": "sandbox"}, "approved": {"team": "Platform", "shared": false, "env": "sandbox"}, "proposed": {"team": "Platform", "shared": false, "env": "sandbox"}}, "proposal": null, "status": null}, "notification-worker-nodes": {"views": {"today": {"team": "Platform", "shared": false, "env": "prod"}, "approved": {"team": "Platform", "shared": false, "env": "prod"}, "proposed": {"team": "Platform", "shared": false, "env": "prod"}}, "proposal": null, "status": null}, "platform-logging": {"views": {"today": {"team": "Platform", "shared": false, "env": "prod"}, "approved": {"team": "Platform", "shared": false, "env": "prod"}, "proposed": {"team": "Platform", "shared": true, "env": "prod"}}, "proposal": "TAG-platform-logging", "status": "proposed"}, "shared-nat-gateway": {"views": {"today": {"team": "Unallocated", "shared": false, "env": "untagged"}, "approved": {"team": "Unallocated", "shared": false, "env": "untagged"}, "proposed": {"team": "Platform", "shared": true, "env": "prod"}}, "proposal": "TAG-shared-nat-gateway", "status": "proposed"}, "loyalty-cache": {"views": {"today": {"team": "Unallocated", "shared": false, "env": "untagged"}, "approved": {"team": "Unallocated", "shared": false, "env": "untagged"}, "proposed": {"team": "Loyalty", "shared": false, "env": "prod"}}, "proposal": "TAG-loyalty-cache", "status": "proposed"}, "search-indexer-nodes": {"views": {"today": {"team": "Unallocated", "shared": false, "env": "untagged"}, "approved": {"team": "Unallocated", "shared": false, "env": "untagged"}, "proposed": {"team": "Unallocated", "shared": false, "env": "prod"}}, "proposal": "TAG-search-indexer-nodes", "status": "needs owner"}, "membership-api-alb": {"views": {"today": {"team": "Unallocated", "shared": false, "env": "prod"}, "approved": {"team": "Unallocated", "shared": false, "env": "prod"}, "proposed": {"team": "Membership & Identity", "shared": false, "env": "prod"}}, "proposal": "TAG-membership-api-alb", "status": "proposed"}, "dev-test-vm-7": {"views": {"today": {"team": "Unallocated", "shared": false, "env": "untagged"}, "approved": {"team": "Unallocated", "shared": false, "env": "untagged"}, "proposed": {"team": "Unallocated", "shared": false, "env": "dev"}}, "proposal": "TAG-dev-test-vm-7", "status": "needs owner"}, "RI-order-service-db": {"views": {"today": {"team": "Commerce", "shared": false, "env": "prod"}, "approved": {"team": "Commerce", "shared": false, "env": "prod"}, "proposed": {"team": "Commerce", "shared": false, "env": "prod"}}, "proposal": null, "status": null}}, "teams": ["Commerce", "Loyalty", "Membership & Identity", "Platform"], "categories": ["Compute", "Databases", "Management and Governance", "Networking", "Storage"], "envs": ["dev", "prod", "sandbox", "staging", "untagged"], "budgets": {"Commerce": 47000, "Loyalty": 42000, "Membership & Identity": 18000, "Platform": 16000}, "has_billed": true, "defaults": {"split": "proportional", "fixed": "", "unallocated_shared": false}, "views": [["today", "Today's tags"], ["approved", "With approved tag proposals"], ["proposed", "With all tag proposals"]], "export_format": "focus", "tagging": {"kpis": {"resources": 18, "compliant": 9, "proposals": 8, "waiting": 5, "needs_owner": 3, "approved": 0, "rejected": 0, "month": "2026-10", "unallocated_now": 10331.52, "unallocated_fixed_by_proposals": 6603.44}, "proposals": [{"id": "TAG-partner-gateway-egress", "resource": "partner-gateway-egress", "set": {"team": "Commerce"}, "remove": [], "team": "Commerce", "status": "proposed", "monthly_cost": 5938.64, "allocation_now": "Commerce", "allocation_after": "Commerce"}, {"id": "TAG-platform-logging", "resource": "platform-logging", "set": {"shared": "true"}, "remove": [], "team": "Platform", "status": "proposed", "monthly_cost": 5937.82, "allocation_now": "Platform", "allocation_after": "Platform"}, {"id": "TAG-shared-nat-gateway", "resource": "shared-nat-gateway", "set": {"team": "Platform", "env": "prod", "shared": "true"}, "remove": [], "team": "Platform", "status": "proposed", "monthly_cost": 3000.39, "allocation_now": "Unallocated", "allocation_after": "Platform"}, {"id": "TAG-loyalty-cache", "resource": "loyalty-cache", "set": {"team": "Loyalty", "env": "prod"}, "remove": ["Environment", "Team"], "team": "Loyalty", "status": "proposed", "monthly_cost": 2415.09, "allocation_now": "Unallocated", "allocation_after": "Loyalty"}, {"id": "TAG-membership-api-alb", "resource": "membership-api-alb", "set": {"team": "Membership & Identity", "service": "membership-api"}, "remove": [], "team": "Membership & Identity", "status": "proposed", "monthly_cost": 1187.96, "allocation_now": "Unallocated", "allocation_after": "Membership & Identity"}, {"id": "TAG-search-indexer-nodes", "resource": "search-indexer-nodes", "set": {"env": "prod"}, "remove": [], "team": "", "status": "needs owner", "monthly_cost": 3121.67, "allocation_now": "Unallocated", "allocation_after": "Unallocated"}, {"id": "TAG-dev-test-vm-7", "resource": "dev-test-vm-7", "set": {"env": "dev"}, "remove": [], "team": "", "status": "needs owner", "monthly_cost": 606.41, "allocation_now": "Unallocated", "allocation_after": "Unallocated"}, {"id": "TAG-old-promo-bucket", "resource": "old-promo-bucket", "set": {"env": "prod"}, "remove": [], "team": "", "status": "needs owner", "monthly_cost": null, "allocation_now": "Unallocated", "allocation_after": "Unallocated"}]}, "as_of": "2026-11-17"}</script>
+<script>
+const D = JSON.parse(document.getElementById('data').textContent);
+const UN = 'Unallocated', SH = 'Shared';
+const fmt = (v) => (v < 0 ? '-$' : '$') + Math.abs(Math.round(v)).toLocaleString('en-US');
+const pct = (v) => Math.round(v * 100) + '%';
+const mlabel = (m) => new Date(m + '-01T00:00:00Z').toLocaleString('en-GB', { month: 'short', year: 'numeric', timeZone: 'UTC' });
+const KEY = 'ecc-finops-dashboard-v1';
+const defaults = () => ({ view: 'today', basis: 'a', from: D.months[0], to: D.months[D.months.length - 1],
+  envs: D.envs.slice(), cats: D.categories.slice(), split: D.defaults.split, unShared: D.defaults.unallocated_shared,
+  fixed: parseFixed(D.defaults.fixed), budgets: Object.assign({}, D.budgets) });
+function parseFixed(text) {
+  const out = {}; (text || '').split(',').forEach((p) => { const [t, v] = p.split(':'); if (t && v) out[t.trim()] = +v; });
+  D.teams.forEach((t) => { if (!(t in out)) out[t] = 0; }); return out;
+}
+let S;
+try { S = Object.assign(defaults(), JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (err) { S = defaults(); }
+// a link can carry a view: #view=proposed&split=even&basis=b&unshared=1&from=2026-06&to=2026-11
+new URLSearchParams(location.hash.slice(1)).forEach((v, k) => {
+  if (k === 'unshared') S.unShared = v === '1';
+  else if (['view', 'basis', 'split', 'from', 'to'].includes(k)) S[k] = v;
+});
+const save = () => {
+  try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (err) { /* storage unavailable */ }
+  const h = `view=${S.view}&basis=${S.basis}&split=${S.split}&unshared=${S.unShared ? 1 : 0}&from=${S.from}&to=${S.to}`;
+  try { history.replaceState(null, '', '#' + h); } catch (err) { /* file: URLs may refuse */ }
+};
+const $ = (s) => document.querySelector(s);
+const SLOT = (t) => { const i = D.teams.indexOf(t); return t === UN ? 'var(--s0)' : t === SH ? 'var(--s5)' : `var(--s${(i % 4) + 1})`; };
+
+function compute() {
+  const months = D.months.filter((m) => m >= S.from && m <= S.to);
+  const res = {}; // month -> {team: cost}
+  const pools = {}; const directs = {};
+  months.forEach((m) => { res[m] = {}; pools[m] = 0; directs[m] = {}; });
+  D.rows.forEach((row) => {
+    if (!(row.m in res)) return;
+    const v = D.resources[row.r].views[S.view];
+    if (!S.envs.includes(v.env) || !S.cats.includes(row.c)) return;
+    const cost = S.basis === 'b' ? row.b : row.a;
+    if (v.shared || (S.unShared && v.team === UN)) { pools[row.m] += cost; return; }
+    directs[row.m][v.team] = (directs[row.m][v.team] || 0) + cost;
+  });
+  months.forEach((m) => {
+    const direct = directs[m]; Object.assign(res[m], direct);
+    const pool = pools[m]; if (!pool) return;
+    const named = D.teams.filter((t) => t !== UN);
+    let weights = {};
+    if (S.split === 'even') named.forEach((t) => { weights[t] = 1; });
+    else if (S.split === 'proportional') named.forEach((t) => { weights[t] = Math.max(direct[t] || 0, 0); });
+    else if (S.split === 'fixed') named.forEach((t) => { weights[t] = Math.max(+S.fixed[t] || 0, 0); });
+    const total = Object.values(weights).reduce((a, b) => a + b, 0);
+    if (S.split === 'none' || !total) { res[m][SH] = (res[m][SH] || 0) + pool; return; }
+    named.forEach((t) => { if (weights[t]) res[m][t] = (res[m][t] || 0) + pool * weights[t] / total; });
+  });
+  const teams = D.teams.filter((t) => months.some((m) => Math.abs(res[m][t] || 0) > 0.5))
+    .concat([SH, UN].filter((t) => months.some((m) => Math.abs(res[m][t] || 0) > 0.5)));
+  const forecast = {};
+  if (D.partial && res[D.partial]) teams.forEach((t) => { forecast[t] = (res[D.partial][t] || 0) * D.scale; });
+  return { months, res, teams, forecast, pools };
+}
+
+function chart(c) {
+  const cols = c.months.map((m) => ({ m, fc: m === D.partial }));
+  const val = (t, col) => Math.max(col.fc ? (c.forecast[t] || 0) : (c.res[col.m][t] || 0), 0);
+  const totals = cols.map((col) => c.teams.reduce((a, t) => a + val(t, col), 0));
+  const W = 1000, H = 300, L = 56, R = 8, T = 22, B = 26, pw = W - L - R, ph = H - T - B;
+  const max = Math.max(...totals, 1) * 1.08;
+  const step = [5e3, 1e4, 2e4, 25e3, 5e4, 1e5, 2e5, 25e4, 5e5, 1e6].find((s) => max / s <= 5) || max / 4;
+  const top = step * Math.ceil(max / step);
+  const y = (v) => T + ph - (v / top) * ph;
+  const slot = pw / Math.max(cols.length, 1), bw = Math.min(34, slot * 0.62);
+  let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Monthly cost by team, stacked columns">`;
+  for (let v = 0; v <= top + 1; v += step) s += `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">$${Math.round(v / 1000)}k</text>`;
+  cols.forEach((col, i) => {
+    const x = L + i * slot + (slot - bw) / 2; let base = 0;
+    const vis = c.teams.filter((t) => val(t, col) > 0);
+    vis.forEach((t, j) => {
+      const v = val(t, col), y0 = y(base + v), h = Math.max(y(base) - y0 - (j < vis.length - 1 ? 2 : 0), 0.5);
+      s += `<rect class="seg${col.fc ? ' fc' : ''}" x="${x}" y="${y0}" width="${bw}" height="${h}" rx="${j === vis.length - 1 ? 3 : 0}" style="fill:${SLOT(t)}"><title>${esc(t)} · ${mlabel(col.m)}${col.fc ? ' forecast' : ''}: ${fmt(v)}</title></rect>`;
+      base += v;
+    });
+    if (col.fc) s += `<rect class="fc-outline" x="${x}" y="${y(base)}" width="${bw}" height="${y(0) - y(base)}" rx="3"/>`;
+    s += `<text x="${x + bw / 2}" y="${H - 8}" text-anchor="middle">${mlabel(col.m).slice(0, 3)}${col.fc ? '*' : ''}</text>`;
+    if (i === cols.length - 1 || i === cols.length - 2) s += `<text class="val" x="${x + bw / 2}" y="${y(base) - 6}" text-anchor="middle">$${Math.round(base / 1000)}k</text>`;
+  });
+  s += '</svg>';
+  const legend = c.teams.map((t) => `<span><i style="background:${SLOT(t)}"></i>${esc(t)}</span>`).join('')
+    + (D.partial && c.months.includes(D.partial) ? `<span><i class="fc"></i>* ${mlabel(D.partial)} forecast: ${esc(D.run_rate)}</span>` : '');
+  $('#chart').innerHTML = `<div class="viz"><div class="legend">${legend}</div>${s}</div>`;
+}
+
+function esc(t) { return String(t).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch])); }
+
+function table(c) {
+  const last = c.months.filter((m) => D.complete.includes(m)).pop();
+  const hasFc = D.partial && c.months.includes(D.partial);
+  let h = '<tr><th>Team</th>' + c.months.map((m) => `<th class="num">${mlabel(m).slice(0, 3)}${m === D.partial ? '*' : ''}</th>`).join('')
+    + (hasFc ? '<th class="num">Fcst*</th>' : '') + '<th class="num">Budget / month</th><th>vs budget</th></tr>';
+  c.teams.forEach((t) => {
+    const b = S.budgets[t];
+    const basis = hasFc ? c.forecast[t] || 0 : (last ? c.res[last][t] || 0 : 0);
+    const ratio = b ? basis / b : 0;
+    const cls = ratio > 1 ? 'over' : ratio > 0.9 ? 'near' : '';
+    const budgetCell = (t === UN || t === SH) ? '<td></td><td class="sub">no owner</td>'
+      : `<td class="num"><input class="budget" type="number" min="0" step="500" data-team="${esc(t)}" value="${b || ''}" aria-label="Monthly budget for ${esc(t)}"></td>`
+        + `<td>${b ? `<span class="${ratio > 1 ? 'up-bad' : ''}">${pct(ratio)} ${hasFc ? 'forecast' : mlabel(last)}</span><div class="bar"><i class="${cls}" style="width:${Math.min(ratio, 1) * 100}%"></i></div>` : '<span class="sub">no budget</span>'}</td>`;
+    h += `<tr><td><i class="dot" style="background:${SLOT(t)}"></i>${esc(t)}</td>` + c.months.map((m) => `<td class="num">${fmt(c.res[m][t] || 0)}</td>`).join('')
+      + (hasFc ? `<td class="num">${fmt(c.forecast[t] || 0)}</td>` : '') + budgetCell + '</tr>';
+  });
+  const tot = (m) => c.teams.reduce((a, t) => a + (c.res[m][t] || 0), 0);
+  h += '<tr class="total"><td>Total</td>' + c.months.map((m) => `<td class="num">${fmt(tot(m))}</td>`).join('')
+    + (hasFc ? `<td class="num">${fmt(c.teams.reduce((a, t) => a + (c.forecast[t] || 0), 0))}</td>` : '') + '<td></td><td></td></tr>';
+  $('#table').innerHTML = h;
+  document.querySelectorAll('input.budget').forEach((el) => el.addEventListener('change', () => {
+    const v = parseFloat(el.value); if (v > 0) S.budgets[el.dataset.team] = v; else delete S.budgets[el.dataset.team];
+    render();
+  }));
+}
+
+function kpis(c) {
+  const last = c.months.filter((m) => D.complete.includes(m)).pop();
+  const tot = last ? c.teams.reduce((a, t) => a + (c.res[last][t] || 0), 0) : 0;
+  const un = last ? (c.res[last][UN] || 0) : 0;
+  const pool = last ? c.pools[last] : 0;
+  const hasFc = D.partial && c.months.includes(D.partial);
+  const over = c.teams.filter((t) => S.budgets[t] && (hasFc ? c.forecast[t] || 0 : (last ? c.res[last][t] || 0 : 0)) > S.budgets[t]);
+  const splitText = { none: 'shown as its own row', even: 'split evenly', proportional: 'split by direct cost', fixed: 'split by fixed %' }[S.split];
+  $('#kpis').innerHTML = [
+    ['Spend · ' + (last ? mlabel(last) : '—'), fmt(tot), S.basis === 'b' ? 'billed (invoice)' : 'amortised', 'cost export'],
+    ['Unallocated · ' + (last ? mlabel(last) : '—'), fmt(un), tot ? pct(un / tot) + ' of spend' : '', 'no valid team tag or catalogue owner'],
+    ['Shared pool · ' + (last ? mlabel(last) : '—'), fmt(pool), splitText, 'shared=true' + (S.unShared ? ' + unallocated' : '')],
+    ['Over budget', String(over.length), over.length ? over.join(', ') : 'no team over budget', hasFc ? mlabel(D.partial) + ' forecast' : 'latest complete month'],
+  ].map(([l, v, d, s]) => `<div class="panel kpi"><span class="label">${esc(l)}</span><span class="value">${esc(v)}</span><span class="delta${l === 'Over budget' && over.length ? ' up-bad' : ''}">${esc(d)}</span><span class="src">${esc(s)}</span></div>`).join('');
+}
+
+function config() {
+  const fixed = Object.entries(S.fixed).filter(([, v]) => +v > 0).map(([t, v]) => `${t}:${v}`).join(',');
+  const budgets = Object.entries(S.budgets).map(([t, v]) => `  "${t}": ${v}`).join(',\n');
+  $('#cfg').textContent = `# config/product.toml, [use_cases.finops.settings]\nshared_split = "${S.split}"\nshared_split_fixed = "${fixed}"\nunallocated_as_shared = ${S.unShared}\n\n# use-cases/finops/data/synthetic/budgets.json, "monthly"\n{\n${budgets}\n}`;
+}
+
+function csv(c) {
+  const head = ['team'].concat(c.months).concat(D.partial && c.months.includes(D.partial) ? ['forecast'] : []);
+  const lines = [head.join(',')].concat(c.teams.map((t) => [`"${t}"`].concat(c.months.map((m) => (c.res[m][t] || 0).toFixed(2)))
+    .concat(D.partial && c.months.includes(D.partial) ? [(c.forecast[t] || 0).toFixed(2)] : []).join(',')));
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([lines.join('\n') + '\n'], { type: 'text/csv' }));
+  a.download = `cost-by-team-${S.view}-${S.basis === 'b' ? 'billed' : 'amortised'}.csv`; a.click();
+}
+
+function controls() {
+  const opt = (v, t, cur) => `<option value="${esc(v)}"${v === cur ? ' selected' : ''}>${esc(t)}</option>`;
+  $('#view').innerHTML = D.views.map(([v, t]) => opt(v, t, S.view)).join('');
+  $('#basis').innerHTML = opt('a', 'Amortised', S.basis) + (D.has_billed ? opt('b', 'Billed (invoice)', S.basis) : '');
+  $('#from').innerHTML = D.months.map((m) => opt(m, mlabel(m), S.from)).join('');
+  $('#to').innerHTML = D.months.map((m) => opt(m, mlabel(m), S.to)).join('');
+  $('#split').innerHTML = [['none', 'Show as its own row'], ['even', 'Split evenly'], ['proportional', 'Split by direct cost'], ['fixed', 'Split by fixed %']].map(([v, t]) => opt(v, t, S.split)).join('');
+  $('#unshared').checked = S.unShared;
+  const chips = (id, all, sel, key) => { $(id).innerHTML = all.map((x) => `<button class="chip" type="button" data-k="${key}" data-v="${esc(x)}" aria-pressed="${sel.includes(x)}">${esc(x)}</button>`).join(''); };
+  chips('#envs', D.envs, S.envs, 'envs'); chips('#cats', D.categories, S.cats, 'cats');
+  $('#fixed').hidden = S.split !== 'fixed';
+  $('#fixed .fixed-grid').innerHTML = D.teams.map((t) => `<label>${esc(t)}<input type="number" min="0" step="5" data-team="${esc(t)}" value="${+S.fixed[t] || 0}"></label>`).join('');
+  document.querySelectorAll('#fixed input').forEach((el) => el.addEventListener('change', () => { S.fixed[el.dataset.team] = +el.value || 0; render(); }));
+  document.querySelectorAll('.chip').forEach((el) => el.addEventListener('click', () => {
+    const list = S[el.dataset.k], v = el.dataset.v;
+    S[el.dataset.k] = list.includes(v) ? list.filter((x) => x !== v) : list.concat([v]); render(true);
+  }));
+}
+
+function tagging() {
+  if (!D.tagging) { $('#tagging').innerHTML = '<p class="sub">No tagging check yet: run <span class="mono">ecc finops tags check</span>.</p>'; return; }
+  const k = D.tagging.kpis;
+  $('#tagging').innerHTML = `<p class="sub">${k.resources} resources checked · ${k.compliant} compliant · ${k.waiting} proposals waiting for the owning team · ${k.needs_owner} with no owner established · ${k.approved} approved. The agent proposes; nothing is tagged until the team applies it.</p>`
+    + '<div class="scroll"><table><tr><th>Proposal</th><th>Tags</th><th>Approver team</th><th class="num">Monthly cost</th><th>Allocation</th><th>Status</th></tr>'
+    + D.tagging.proposals.map((p) => `<tr><td class="mono">${esc(p.id)}</td><td class="mono">${Object.entries(p.set).map(([a, b]) => esc(a + '=' + b)).join(', ')}${p.remove.length ? ' · remove ' + esc(p.remove.join(', ')) : ''}</td><td>${esc(p.team || '—')}</td><td class="num">${p.monthly_cost == null ? '—' : fmt(p.monthly_cost)}</td><td>${esc(p.allocation_now)} → ${esc(p.allocation_after)}</td><td>${esc(p.status)}</td></tr>`).join('')
+    + '</table></div>';
+}
+
+function render(redraw) {
+  if (redraw) controls();
+  $('#fixed').hidden = S.split !== 'fixed';
+  const c = compute(); kpis(c); chart(c); table(c); config(); save();
+  $('#csv').onclick = () => csv(c);
+}
+
+controls(); tagging();
+['view', 'basis', 'from', 'to', 'split'].forEach((id) => $('#' + id).addEventListener('change', (ev) => {
+  S[id] = ev.target.value; if (S.from > S.to) S.to = S.from; render(true);
+}));
+$('#unshared').addEventListener('change', (ev) => { S.unShared = ev.target.checked; render(); });
+$('#reset').addEventListener('click', () => { S = defaults(); render(true); });
+render();
+</script>
+</body></html>

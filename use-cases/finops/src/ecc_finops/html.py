@@ -15,7 +15,7 @@ from html import escape as e
 
 from ecc_core.page import CSS, badge
 
-from .fmt import money, month_label, pct
+from .fmt import day_label, money, month_label, pct
 from .spend import UNALLOCATED
 
 STATUSES = {"proposed": ("blue", "Proposed"), "approved": ("warn", "Approved"), "implemented": ("ok", "Implemented"),
@@ -145,7 +145,12 @@ def spend_table(sp: dict, kpis: dict) -> str:
     rows += ('<tr class="total"><td>Total</td>' + "".join(f'<td class="num">{money(tot[m])}</td>' for m in months)
              + (f'<td class="num">{money(kpis["forecast_total"])}</td>' if sp["partial"] else "") + "</tr>")
     note = f"* {month_label(sp['partial'])} is month to date; Fcst is its run-rate forecast." if sp["partial"] else ""
-    return (f'<details open><summary>Table view (USD, net of credits)</summary><div class="scroll"><table>'
+    if sp.get("billed"):
+        rows += ('<tr><td class="sub">Billed (invoice)</td>'
+                 + "".join(f'<td class="num sub">{money(sp["billed"][m])}</td>' for m in months)
+                 + ('<td></td>' if sp["partial"] else "") + "</tr>")
+        note += " Spend is amortised: commitments are spread over their term; the billed row is what was invoiced."
+    return (f'<details open><summary>Table view (USD, amortised, net of credits)</summary><div class="scroll"><table>'
             f'<tr><th>Team</th>{head}</tr>{rows}</table></div><p class="sub mono">{e(note)}</p></details>')
 
 
@@ -216,7 +221,10 @@ def report_html(d: dict) -> str:
                   f'z = {o["z"]:.1f} standard deviations. Rule: z ≥ {r["z_threshold"]:g}, increase ≥ {money(r["min_increase_usd"])} '
                   f'and ≥ {pct(r["min_increase_ratio"])}.</p>'
                   f'{sparkline(a)}'
-                  f'<p class="note">Likely cause: {e(cause)} · confidence {_b(a["confidence"])}</p>{expl}'
+                  + "".join(f'<p class="sub">Daily alert {e(x["id"])}: rose on {e(day_label(x["start"]))}, raised on '
+                            f'{e(day_label(x["confirmed"]))}; the monthly rule waits for {e(day_label(x["month_closes"]))}.</p>'
+                            for x in d.get("daily", {}).get("alerts", []) if x["anomaly"] == a["id"])
+                  + f'<p class="note">Likely cause: {e(cause)} · confidence {_b(a["confidence"])}</p>{expl}'
                   + (f'<h3 style="margin-top:8px">Could not establish</h3><ul class="clean">{unknown}</ul>' if unknown else "")
                   + f'<p class="mono sub">evidence {e(", ".join(a["evidence"]))}</p></div>')
     flagged = _b("crit" if d["anomalies"] else "ok", f"{len(d['anomalies'])} flagged")
@@ -253,6 +261,34 @@ def report_html(d: dict) -> str:
             + (f'<h3 style="margin-top:10px">Drafts rejected by validation</h3><ul class="clean">{rejected}</ul>' if rejected else "")
             + "</section>")
 
+    daily = d.get("daily", {})
+    drows = "".join(f'<tr><td class="mono">{e(x["id"])}</td><td>{e(x["line_item"])} on {e(x["resource"])}</td>'
+                    f'<td>{e(day_label(x["start"]))}</td><td>{e(day_label(x["confirmed"]))}</td>'
+                    f'<td class="num">{money(x["days"][0]["value"])} vs {money(x["days"][0]["mean"])}</td>'
+                    f'<td class="num">+{pct(x["days"][0]["ratio"])}</td>'
+                    f'<td>{e(x["anomaly"]) if x["anomaly"] else _b("warn", "Early signal")}</td></tr>'
+                    for x in daily.get("alerts", []))
+    daily_panel = (f'<section class="panel"><div class="panel-h"><h2>Daily alerts</h2><span class="sub">step changes '
+                   f'caught in days · z ≥ {r["daily_z_threshold"]:g}, ≥ {money(r["daily_min_increase_usd"])} and '
+                   f'≥ {pct(r["daily_min_increase_ratio"])} a day, {r["daily_confirm_days"]} days running</span></div>'
+                   + (f'<div class="scroll"><table><tr><th>Alert</th><th>Series</th><th>Rose on</th><th>Raised on</th>'
+                      f'<th class="num">Day vs mean</th><th class="num">Up</th><th>Monthly anomaly</th></tr>{drows}</table></div>'
+                      if drows else f'<p class="sub">{"None raised." if daily.get("available") else "The cost export is not daily."}</p>')
+                   + "</section>")
+    crows = ""
+    for c in d.get("commitments", []):
+        util = pct(c["utilisation"]) if c["utilisation"] is not None else "—"
+        flags = (_b("warn", "Underused") if c["underused"] else "") + (_b("crit", "Renewal due") if c["expiring"] else "")
+        crows += (f'<tr><td>{e(c["id"])}<div class="mono sub">{e(c["type"])} · {e(c["payment"])}</div></td>'
+                  f'<td>{e(c["team"])}</td><td>{e(c["covers"])}</td><td>{e(c["end"])}<div class="sub">{c["days_to_expiry"]} days</div></td>'
+                  f'<td class="num">{util}</td><td class="num">{money(c["unused"])}</td>'
+                  f'<td class="num">{money(c["billed_window"]) if c["billed_window"] is not None else "—"} / '
+                  f'{money(c["amortised_window"])}</td><td>{flags or _b("ok", "OK")}</td></tr>')
+    commit_panel = (f'<section class="panel"><div class="panel-h"><h2>Reservations and savings plans</h2>'
+                    f'<span class="sub">utilisation in {e(month_label(d["commitments"][0]["month"]))}</span></div>'
+                    f'<div class="scroll"><table><tr><th>Commitment</th><th>Team</th><th>Covers</th><th>Ends</th>'
+                    f'<th class="num">Utilisation</th><th class="num">Unused</th><th class="num">Billed / amortised</th>'
+                    f'<th></th></tr>{crows}</table></div></section>') if crows else ""
     unknown = "".join(f"<li>{e(u)}</li>" for u in d["could_not_establish"]) or "<li>Nothing.</li>"
     ev = "".join(f'<li><b class="mono">{e(x["id"])}</b> {e(x["summary"])}'
                  + "".join(f" {_b('warn', f)}" for f in x["flags"]) + "</li>" for x in d["evidence"])
@@ -267,9 +303,10 @@ def report_html(d: dict) -> str:
 provider <span class="mono">{e(d["provider"])}</span>. From the cost export. Allocation, anomalies, likely causes and
 savings estimates are computed by rules; the AI explains them and drafts notes to owning teams. Estimated and realised
 savings are tracked separately, and nothing here changes a cloud resource.</p></div>
-<div class="badges">{_b("neutral", "Synthetic cost export")}{_b("crit" if d["anomalies"] else "ok", f"{len(d['anomalies'])} anomalies")}</div></header>
+<div class="badges">{_b("neutral", "Synthetic cost export")}{_b("neutral", e(d.get("export_format", "focus")))}{_b("crit" if d["anomalies"] else "ok", f"{len(d['anomalies'])} anomalies")}</div></header>
 <div class="grid g-5">{kpis}</div>
 <div class="grid g-main">{left}{right}</div>
+<div class="grid g-two">{daily_panel}{commit_panel}</div>
 {recs}
 <div class="grid g-two" style="margin-top:16px">
 <section class="panel"><h2>Could not establish</h2><ul class="clean">{unknown}</ul></section>

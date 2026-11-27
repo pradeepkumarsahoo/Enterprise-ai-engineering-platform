@@ -1,0 +1,80 @@
+{
+  "_meta": {
+    "author": "Pradeep Sahoo",
+    "generated_by": "scripts/generate_synthetic_data.py",
+    "synthetic": true
+  },
+  "proposals": {
+    "loyalty-cache": {
+      "set": {
+        "team": "Loyalty",
+        "env": "prod"
+      },
+      "remove": [
+        "Environment",
+        "Team"
+      ]
+    },
+    "search-indexer-nodes": {
+      "set": {
+        "env": "prod"
+      },
+      "remove": []
+    },
+    "membership-api-alb": {
+      "set": {
+        "team": "Membership & Identity",
+        "service": "membership-api"
+      },
+      "remove": []
+    },
+    "dev-test-vm-7": {
+      "set": {
+        "env": "dev"
+      },
+      "remove": []
+    },
+    "shared-nat-gateway": {
+      "set": {
+        "team": "Platform",
+        "env": "prod",
+        "shared": "true"
+      },
+      "remove": []
+    },
+    "partner-gateway-egress": {
+      "set": {
+        "team": "Commerce"
+      },
+      "remove": []
+    },
+    "platform-logging": {
+      "set": {
+        "shared": "true"
+      },
+      "remove": []
+    },
+    "old-promo-bucket": {
+      "set": {
+        "env": "prod"
+      },
+      "remove": []
+    }
+  },
+  "no_team": [
+    "dev-test-vm-7",
+    "old-promo-bucket",
+    "search-indexer-nodes"
+  ],
+  "compliant": [
+    "commerce-staging-nodes",
+    "loyalty-ledger-db",
+    "membership-api-nodes",
+    "membership-db",
+    "notification-worker-nodes",
+    "order-service-db",
+    "order-service-nodes",
+    "platform-sandbox-cluster",
+    "promotion-engine-nodes"
+  ]
+}

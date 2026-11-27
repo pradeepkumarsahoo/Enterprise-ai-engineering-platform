@@ -29,6 +29,7 @@ fallbacks = "default"          # server-side refusal fallback; "" turns it off
 [sources]
 runbooks = "shared-data/synthetic/runbooks.json"
 catalogue = "shared-data/synthetic/catalogue.json"      # service catalogue: owners, SLOs, contract consumers
+team_directory = "shared-data/synthetic/team_directory.json"   # people, team, role, leavers (from the HR feed)
 
 # Read-only connectors to systems of record.
 # ServiceNow: the URL below is a DUMMY instance. With transport = "fixture" the connector reads
@@ -166,12 +167,14 @@ enabled = true
 module = "ecc_finops"
 
 [use_cases.finops.paths]
-finops_dir = "use-cases/finops/data/synthetic"   # cost export, utilisation, config change log, savings register
+finops_dir = "use-cases/finops/data/synthetic"   # cost export, utilisation, config change log, savings register, commitments
 
 # Anomaly: z >= z_threshold against the trailing baseline AND increase >= min_increase_usd AND
 # >= min_increase_ratio. Who may approve a recommendation (the owning team, never an agent or
 # FinOps alone) is governance and lives in code.
 [use_cases.finops.settings]
+cost_export_file = "cost_export.csv"   # in finops_dir
+cost_export_format = "auto"        # auto (from the header) | focus | aws-cur | azure
 baseline_months = 6
 min_baseline_months = 4
 z_threshold = 3.0
@@ -188,6 +191,20 @@ non_prod_envs = "sandbox,staging,dev"
 idle_days = 30
 realised_baseline_months = 3
 rejected_cooldown_days = 180
+daily_baseline_days = 28           # daily step-change rule (needs a daily export)
+daily_min_baseline_days = 14
+daily_z_threshold = 3.0
+daily_min_increase_usd = 100.0
+daily_min_increase_ratio = 0.20    # above the month-length effect: a 28-day month is +11% a day
+daily_confirm_days = 2             # consecutive flagged days before an alert is raised
+commitment_utilisation_min = 0.90
+commitment_renewal_days = 60
+commit_min_monthly_usd = 5000.0
+commit_min_months = 6
+commit_discount_ratio = 0.28       # 1-year no-upfront compute savings plan vs on-demand (price sheet)
+shared_split = "proportional"      # dashboard default for shared costs: none | even | proportional | fixed
+shared_split_fixed = ""            # for fixed, e.g. "Commerce:40,Loyalty:30,Membership & Identity:15,Platform:15"
+unallocated_as_shared = false      # dashboard default: split unallocated cost like shared cost
 as_of = "2026-11-17"               # "now" for the synthetic data; in production, today's date
 
 [use_cases.finops.gates]
@@ -195,6 +212,10 @@ anomaly_precision_min = 0.8
 anomaly_recall_min = 0.8
 cause_accuracy_min = 0.8
 realised_error_max = 0.1           # realised saving within 10% of the labelled value
+daily_lag_max_days = 2             # a labelled step is alerted within 2 days of its onset
+daily_false_alerts_max = 0         # daily alerts outside a labelled anomaly
+tag_precision_min = 0.9            # tagging agent: proposed tag values that match the labels
+tag_recall_min = 0.9               # tagging agent: labelled tag fixes that were proposed
 rejected_drafts_max = 0
 invented_figures_max = 0
 cloud_changes_max = 0

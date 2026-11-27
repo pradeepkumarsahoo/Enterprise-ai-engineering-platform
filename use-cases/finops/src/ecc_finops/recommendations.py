@@ -19,6 +19,13 @@ Rules (one recommendation per resource; the first that applies wins, so savings 
              stop it outside office hours. Estimate = cost × (1 − office_hours_per_week / 168).
 - rightsize: CPU p95 and memory p95 under their thresholds for 30 days → one size down.
              Estimate = cost × rightsize_saving_ratio.
+- renew:     a reservation or savings plan that is underused and ends within
+             `commitment_renewal_days` → renew it smaller. Estimate = its unused cost last month.
+- commit:    production compute, all on demand, at least `commit_min_monthly_usd` in each of the
+             last 3 complete months, with `commit_min_months` of history → cover the steady part
+             with a 1-year savings plan. Estimate = the lowest of those 3 months × commit_discount_ratio.
+             Buying a commitment spends money for a year, so the estimate is a planning figure
+             and the purchase goes through the team's and finance's own approval.
 A recommendation rejected less than `rejected_cooldown_days` ago is not proposed again; it is
 listed as suppressed with the reason the team gave.
 """
@@ -29,12 +36,13 @@ from datetime import date, timedelta
 from statistics import mean
 
 from .anomalies import Anomaly, Series
+from .commitments import Commitment
 from .evidence import EvidenceBook
-from .fmt import money, month_label
+from .fmt import money, month_label, pct
 from .rules import Rules
 from .spend import Coverage
 
-CODES = {"revert": "REV", "idle": "IDLE", "schedule": "SCH", "rightsize": "RS"}
+CODES = {"revert": "REV", "idle": "IDLE", "schedule": "SCH", "rightsize": "RS", "renew": "RNW", "commit": "CMT"}
 OPEN = ("proposed", "approved")
 STATUS_ORDER = {"proposed": 0, "approved": 1, "implemented": 2, "rejected": 3, "suppressed": 4}
 RULE_TEXT = {   # the rule each recommendation type applies, cited as evidence
@@ -44,6 +52,12 @@ RULE_TEXT = {   # the rule each recommendation type applies, cited as evidence
     "rightsize": lambda r: (f"Rightsizing rule: CPU p95 under {r.rightsize_cpu_p95_max:g}% and memory p95 under "
                             f"{r.rightsize_mem_p95_max:g}% over 30 days; one size down saves "
                             f"{r.rightsize_saving_ratio:g} of the cost"),
+    "renew": lambda r: (f"Renewal rule: a commitment under {pct(r.commitment_utilisation_min)} utilised and ending "
+                        f"within {r.commitment_renewal_days} days is renewed smaller"),
+    "commit": lambda r: (f"Commitment rule: production compute fully on demand, at least "
+                         f"{money(r.commit_min_monthly_usd)} in each of the last 3 complete months and "
+                         f"{r.commit_min_months} months of history; a 1-year no-upfront savings plan saves "
+                         f"{r.commit_discount_ratio:g} of the covered cost (price sheet)"),
 }
 
 
@@ -87,7 +101,7 @@ def _cost(s: Series, cov: Coverage) -> tuple[float, str]:
 
 
 def candidates(series: list[Series], anomalies: list[Anomaly], inp, cov: Coverage, r: Rules,
-               book: EvidenceBook) -> list[Recommendation]:
+               book: EvidenceBook, commits: list[Commitment] | None = None) -> list[Recommendation]:
     out: dict[str, Recommendation] = {}
     taken: set[str] = set()                     # resources that already have a recommendation
 
@@ -113,17 +127,37 @@ def candidates(series: list[Series], anomalies: list[Anomaly], inp, cov: Coverag
             formula, float(est), basis, p.provisional, anomaly=a.id, evidence=a.evidence + [ev])
         taken.add(a.resource)
 
+    # renew: underused commitments that end soon
+    for c in commits or []:
+        if not (c.underused and c.expiring) or c.id in taken:
+            continue
+        rid = rec_id("renew", c.id)
+        est = round(c.unused)
+        basis = f"{month_label(c.month)} unused commitment"
+        formula = f"{money(c.unused)} {basis} × 1"
+        ev = book.add("estimate", "finops-rules", f"{rid}: estimated saving {money(est)} a month = {formula}")
+        rule_ev = book.add("rule", "finops-rules", RULE_TEXT["renew"](r))
+        size = pct(c.utilisation) if c.utilisation is not None else "its used share"
+        out[rid] = Recommendation(
+            rid, "renew", f"Renew {c.id} at {size} of its size before it ends on {c.end}", c.team, c.id,
+            f"{c.kind} (unused)",
+            f"{c.kind} covering {c.covers} was {size} used in {month_label(c.month)} and ends in {c.days_to_expiry} "
+            "days. Renewing it smaller, or letting it lapse, is for the owning team and finance to decide.",
+            formula, float(est), basis, evidence=c.evidence + [rule_ev, ev])
+        taken.add(c.id)
+
     for s in series:
         if s.resource in taken:
             continue
-        u = inp.utilisation.get(s.resource)
-        if not u:
+        u = inp.utilisation.get(s.resource) or {}
+        steady = [m for m in cov.complete if m in s.values][-3:]
+        if not u and not _commit_fits(s, cov, r, steady):
             continue
         cost, month = _cost(s, cov)
         if cost <= 0:
             continue
         basis = f"{month_label(month)} cost"
-        util_ev = book.add("utilisation", "metrics", _util_summary(s.resource, u))
+        util_ev = book.add("utilisation", "metrics", _util_summary(s.resource, u)) if u else None
         kind = None
         if u.get("attached") is False and u.get("days_unattached", 0) >= r.idle_days:
             kind, est = "idle", cost
@@ -142,6 +176,14 @@ def candidates(series: list[Series], anomalies: list[Anomaly], inp, cov: Coverag
             title = f"Rightsize {s.resource} one size down"
             why = (f"CPU p95 {u['cpu_p95_pct']}% and memory p95 {u['mem_p95_pct']}% over 30 days, under the "
                    f"{r.rightsize_cpu_p95_max:g}% and {r.rightsize_mem_p95_max:g}% thresholds.")
+        elif _commit_fits(s, cov, r, steady):
+            low = min(s.values[m] for m in steady)
+            kind, est = "commit", low * r.commit_discount_ratio
+            basis = f"lowest of {month_label(steady[0])}–{month_label(steady[-1])}"
+            formula = f"{money(low)} {basis} × {r.commit_discount_ratio:g}"
+            title = f"Cover steady {s.resource} usage with a 1-year savings plan"
+            why = (f"Production {s.line_item.lower()} fully on demand, at least {money(low)} in each of the last "
+                   f"3 complete months. A commitment spends money for a year: {s.team} and finance decide.")
         if kind is None:
             continue
         rid = rec_id(kind, s.resource)
@@ -149,9 +191,17 @@ def candidates(series: list[Series], anomalies: list[Anomaly], inp, cov: Coverag
         ev = book.add("estimate", "finops-rules", f"{rid}: estimated saving {money(est)} a month = {formula}")
         rule_ev = book.add("rule", "finops-rules", RULE_TEXT[kind](r))
         out[rid] = Recommendation(rid, kind, title, s.team, s.resource, s.line_item, why, formula, float(est), basis,
-                                  evidence=[util_ev, rule_ev, ev])
+                                  evidence=[x for x in (util_ev, rule_ev, ev) if x])
         taken.add(s.resource)
     return list(out.values())
+
+
+def _commit_fits(s: Series, cov: Coverage, r: Rules, steady: list[str]) -> bool:
+    """Production compute, all on demand, steady and large enough, with enough history."""
+    history = [m for m in cov.complete if m in s.values]
+    return bool(s.category == "Compute" and s.env and s.env not in r.non_prod and not s.committed
+                and len(history) >= r.commit_min_months and len(steady) == 3
+                and min(s.values[m] for m in steady) >= r.commit_min_monthly_usd)
 
 
 def _util_summary(resource: str, u: dict) -> str:

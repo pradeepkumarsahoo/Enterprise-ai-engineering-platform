@@ -1,0 +1,5 @@
+{"ResourceTagMappingList": [
+  {"ResourceARN": "arn:aws:elasticache:eu-west-1:111111111111:cluster/loyalty-cache",
+   "Tags": [{"Key": "Team", "Value": "loyalty"}, {"Key": "Environment", "Value": "Production"}]},
+  {"ResourceARN": "arn:aws:ec2:eu-west-1:333333333333:natgateway/nat-0abc", "Tags": [{"Key": "Name", "Value": "shared-nat-gateway"}]}
+]}

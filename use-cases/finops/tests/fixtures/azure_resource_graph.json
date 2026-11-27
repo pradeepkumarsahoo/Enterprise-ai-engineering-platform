@@ -1,0 +1,8 @@
+{"count": 2, "data": [
+  {"id": "/subscriptions/0000/resourceGroups/rg-members/providers/Microsoft.Network/loadBalancers/membership-api-alb",
+   "name": "membership-api-alb", "type": "microsoft.network/loadbalancers", "subscriptionId": "0000", "location": "westeurope",
+   "tags": {"env": "prod"}},
+  {"id": "/subscriptions/0000/resourceGroups/rg-dev/providers/Microsoft.Compute/virtualMachines/dev-test-vm-7",
+   "name": "dev-test-vm-7", "type": "microsoft.compute/virtualmachines", "subscriptionId": "0000", "location": "westeurope",
+   "tags": null}
+]}

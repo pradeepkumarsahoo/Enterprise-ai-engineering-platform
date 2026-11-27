@@ -1,0 +1,56 @@
+{
+  "_meta": {
+    "author": "Pradeep Sahoo",
+    "generated_by": "scripts/generate_synthetic_data.py",
+    "synthetic": true
+  },
+  "as_of": "2026-11-17",
+  "people": {
+    "lee.lead": {
+      "team": "Loyalty",
+      "role": "engineering-lead",
+      "active": true
+    },
+    "dana.owner": {
+      "team": "Loyalty",
+      "role": "service-owner",
+      "active": true
+    },
+    "dana.dev": {
+      "team": "Loyalty",
+      "role": "engineer",
+      "active": true
+    },
+    "ria.owner": {
+      "team": "Membership & Identity",
+      "role": "service-owner",
+      "active": true
+    },
+    "sam.owner": {
+      "team": "Commerce",
+      "role": "service-owner",
+      "active": true
+    },
+    "lee.dev": {
+      "team": "Commerce",
+      "role": "engineer",
+      "active": true
+    },
+    "jo.lead": {
+      "team": "Commerce",
+      "role": "engineering-lead",
+      "active": false,
+      "left_on": "2026-10-31"
+    },
+    "noor.lead": {
+      "team": "Platform",
+      "role": "engineering-lead",
+      "active": true
+    },
+    "finley.finops": {
+      "team": "FinOps",
+      "role": "finops-analyst",
+      "active": true
+    }
+  }
+}
