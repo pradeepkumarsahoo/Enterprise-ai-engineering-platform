@@ -9,9 +9,12 @@ import pytest
 from ecc_core.audit import AuditLog
 from ecc_core.cli import main as ecc
 from ecc_core.config import ConfigError, load_config
+from ecc_core.evidence import Evidence, render_evidence
 from ecc_core.llm import ClaudeClient, ModelSettings, ProviderError, fake_anthropic
 from ecc_core.plugin import context_for, load_enabled
 from ecc_core.safety import clean, looks_like_injection, redact
+from ecc_core.servicenow import sn_time
+from ecc_core.sources import read_data
 
 REPO = Path(__file__).resolve().parents[2]
 CONFIG = REPO / "config" / "product.toml"
@@ -36,6 +39,24 @@ def test_audit_log_is_append_only(tmp_path):
     log.record("agent:x", "run.completed", "t", "c1", items=2)
     assert [e["action"] for e in log.entries()] == ["tool.call", "run.completed"]
     assert not any(hasattr(log, m) for m in ("update", "delete", "clear"))
+
+
+# ------------------------------------------------------------------ helpers shared by use cases
+
+def test_render_evidence_marks_flags():
+    out = render_evidence([Evidence("E1", "log", "s", "ok"), Evidence("E2", "note", "s", "odd", ["possible_prompt_injection"])])
+    assert out == ('<evidence id="E1" kind="log">ok</evidence>\n'
+                   '<evidence id="E2" kind="note" flags="possible_prompt_injection">odd</evidence>')
+
+
+def test_read_data_drops_meta(tmp_path):
+    (tmp_path / "d.json").write_text('{"_meta": {"author": "x"}, "rows": [1]}', encoding="utf-8")
+    assert read_data(tmp_path / "d.json") == {"rows": [1]}
+
+
+def test_sn_time_is_utc():
+    t = sn_time("2026-10-02 08:14:00")
+    assert t.tzinfo is not None and t.utcoffset().total_seconds() == 0 and (t.hour, t.minute) == (8, 14)
 
 
 # ------------------------------------------------------------------ model client (no network)

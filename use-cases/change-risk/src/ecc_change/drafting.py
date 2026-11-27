@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 from dataclasses import asdict, dataclass
 
+from ecc_core.evidence import render_evidence
 from ecc_core.figures import figures
 
 from .factors import Assessment
@@ -66,8 +67,7 @@ def render_draft_request(a: Assessment) -> str:
         "similar_past_changes": [asdict(s) for s in a.similar],
         "could_not_establish": a.could_not_establish,
     }
-    evidence = "\n".join(f'<evidence id="{e.id}" kind="{e.kind}"' + (f' flags="{",".join(e.flags)}"' if e.flags else "")
-                         + f">{e.summary}</evidence>" for e in a.evidence)
+    evidence = render_evidence(a.evidence)
     return ("Explain this change's risk and draft release conditions.\n\n"
             f"<context>\n{json.dumps(payload, indent=2, ensure_ascii=False)}\n</context>\n\n"
             f"<evidence_records>\n{evidence}\n</evidence_records>\n\nReturn JSON matching the required schema.")

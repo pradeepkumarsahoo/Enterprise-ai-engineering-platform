@@ -15,7 +15,8 @@ from html import escape as e
 
 from ecc_core.page import CSS, badge
 
-from .analysis import UNALLOCATED, money, month_label, pct
+from .fmt import money, month_label, pct
+from .spend import UNALLOCATED
 
 STATUSES = {"proposed": ("blue", "Proposed"), "approved": ("warn", "Approved"), "implemented": ("ok", "Implemented"),
             "rejected": ("crit", "Rejected"), "suppressed": ("neutral", "Suppressed"),

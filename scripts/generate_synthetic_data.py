@@ -959,6 +959,11 @@ FINOPS_LABELS = {   # written by hand from the scenario; never read by the analy
                         "REC-REV-notification-worker", "REC-RS-promotion-engine-nodes",
                         "REC-SCH-commerce-staging-nodes"],
     "suppressed": ["REC-RS-membership-api-nodes"],
+    "not_flagged": [   # planted on purpose; flagging any month of these is a false positive
+        {"resource": "order-service-nodes", "line_item": "Kubernetes nodes",
+         "why": "steady growth of 1.5% a month, and the September SLA credit"},
+        {"resource": "partner-gateway-egress", "line_item": "Data transfer", "why": "a 9% bump in August"},
+    ],
     "realised": {"REC-SCH-platform-sandbox-cluster": {"expected_monthly_usd": 2700, "tolerance": 0.1}},
     "unallocated_resources": ["shared-nat-gateway"],
 }

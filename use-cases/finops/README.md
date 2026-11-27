@@ -96,11 +96,17 @@ Change requests come from `[connectors.servicenow]`; the service catalogue from 
 | `src/ecc_finops/__init__.py` | `USE_CASE`, and the Claude drafter on `ecc_core.llm` |
 | `src/ecc_finops/cli.py` | Commands under `ecc finops` |
 | `src/ecc_finops/sources.py` | Read-only inputs: cost export, utilisation, config change log, savings register, ServiceNow changes, catalogue |
-| `src/ecc_finops/analysis.py` | `Rules`, allocation, spend and forecast, anomaly rule, likely cause and confidence |
+| `src/ecc_finops/rules.py` | `Rules`: every threshold, from the product configuration |
+| `src/ecc_finops/fmt.py` | Money, percentages and months, as evidence, reports and the page show them |
+| `src/ecc_finops/spend.py` | Billing coverage, allocation to teams, spend by team, run-rate forecast |
+| `src/ecc_finops/anomalies.py` | Cost series, the anomaly rule, runs of flagged months |
+| `src/ecc_finops/causes.py` | Likely cause and its points-based confidence |
 | `src/ecc_finops/recommendations.py` | Recommendation rules, estimates, register and decisions, realised savings, totals |
+| `src/ecc_finops/evidence.py` | Evidence records F1, F2, ...: every sentence the model may quote |
 | `src/ecc_finops/drafting.py` | Prompt and schema, mock drafter, validation |
 | `src/ecc_finops/ledger.py` | Decisions: who may decide, implementation records |
-| `src/ecc_finops/review.py` | Analyse, refresh after a decision, Markdown report, evaluation |
-| `src/ecc_finops/html.py` | The report page and its spend chart |
+| `src/ecc_finops/review.py` | Build the analysis, analyse, refresh after a decision |
+| `src/ecc_finops/report.py` · `html.py` | The Markdown report · the report page and its spend chart |
+| `src/ecc_finops/evaluation.py` | Scores against labels, pilot gates |
 | `data/synthetic/` | Cost export, utilisation, config change log, savings register, labels |
 | `reports/` | [`finops-report.md`](reports/finops-report.md) · [page](reports/finops-report.html) · [`evaluation-mock.md`](reports/evaluation-mock.md) |

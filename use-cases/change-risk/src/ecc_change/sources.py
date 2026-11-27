@@ -14,27 +14,18 @@ Resolution notes are never read here, so the scorer cannot learn a change's outc
 """
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from pathlib import Path
 
-from ecc_core.servicenow import ServiceNowClient
-from ecc_core.sources import load_runbooks
+from ecc_core.servicenow import ServiceNowClient, sn_time  # noqa: F401  (re-exported)
+from ecc_core.sources import load_runbooks, read_data
 
 CHANGE_FIELDS = ("number", "cmdb_ci", "type", "state", "short_description", "start_date", "end_date", "requested_by",
                  "close_code")
 INCIDENT_FIELDS = ("number", "cmdb_ci", "priority", "short_description", "opened_at")
 
 
-def sn_time(s: str) -> datetime:
-    return datetime.strptime(s, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
-
-
-def _read(path: Path) -> dict:
-    data = json.loads(Path(path).read_text(encoding="utf-8"))
-    data.pop("_meta", None)
-    return data
 
 
 
@@ -76,10 +67,10 @@ class ChangeInputs:
         changes = {c["number"]: c for c in client.get("change_request", "", CHANGE_FIELDS)}
         sets = {}
         for p in sorted(Path(changesets_dir).glob("CHG*.json")):
-            data = _read(p)
+            data = read_data(p)
             sets[data["change"]] = data
         missing = sorted(set(sets) - set(changes))
         if missing:
             raise ValueError(f"Change sets without a ServiceNow change request: {', '.join(missing)}")
-        return cls(changes, sets, client.get("incident", "", INCIDENT_FIELDS), _read(catalogue), _read(calendar),
+        return cls(changes, sets, client.get("incident", "", INCIDENT_FIELDS), read_data(catalogue), read_data(calendar),
                    load_runbooks(runbooks))

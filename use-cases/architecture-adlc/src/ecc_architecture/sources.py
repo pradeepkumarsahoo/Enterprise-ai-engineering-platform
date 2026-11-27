@@ -8,15 +8,10 @@ stories go to a review pack, never into the ADR repository or the backlog.
 """
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
 from pathlib import Path
 
-
-def _read(path: Path) -> dict:
-    data = json.loads(Path(path).read_text(encoding="utf-8"))
-    data.pop("_meta", None)
-    return data
+from ecc_core.sources import read_data
 
 
 @dataclass
@@ -34,6 +29,6 @@ class ArchitectureInputs:
     @classmethod
     def load(cls, arch_dir: Path) -> "ArchitectureInputs":
         d = Path(arch_dir)
-        return cls(requirement=_read(d / "requirement.json"),
-                   patterns=_read(d / "patterns.json")["patterns"],
-                   adrs=_read(d / "adrs.json")["adrs"])
+        return cls(requirement=read_data(d / "requirement.json"),
+                   patterns=read_data(d / "patterns.json")["patterns"],
+                   adrs=read_data(d / "adrs.json")["adrs"])

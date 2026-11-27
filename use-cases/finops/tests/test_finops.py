@@ -12,12 +12,14 @@ from ecc_core.llm import ClaudeClient, fake_anthropic
 from ecc_core.plugin import context_for
 
 from ecc_finops import ClaudeDrafter, MockDrafter, Rules
-from ecc_finops.analysis import build_series, coverage, detect, judge, spend_by_team
+from ecc_finops.anomalies import build_series, judge
 from ecc_finops.drafting import claims_action, validate
+from ecc_finops.evaluation import evaluate
 from ecc_finops.ledger import decide, effective, record_implemented
 from ecc_finops.recommendations import totals
-from ecc_finops.review import analyse, build, evaluate, find, refresh, results
+from ecc_finops.review import analyse, build, find, refresh, results
 from ecc_finops.sources import FinOpsInputs, read_cost_export
+from ecc_finops.spend import coverage
 
 REPO = Path(__file__).resolve().parents[3]
 CONFIG = str(REPO / "config" / "product.toml")
@@ -290,7 +292,14 @@ def test_evaluation_passes_its_gates(inp, tmp_path):
     assert out["passed"], out["metrics"]
     m = out["metrics"]
     assert m["anomaly_precision"] == 1.0 and m["anomaly_recall"] == 1.0 and m["cause_accuracy"] == 1.0
-    assert m["recommendations_match"] and m["suppressed_match"] and m["unallocated_match"]
+    assert m["recommendations_match"] and m["suppressed_match"] and m["unallocated_match"] and m["not_flagged_ok"]
+
+
+def test_evaluation_catches_a_series_that_must_not_be_flagged(inp, tmp_path):
+    loose = replace(RULES, min_increase_usd=0.0, min_increase_ratio=0.0)       # the August egress bump now fires
+    m = evaluate(inp, loose, MockDrafter(), CTX.gates, LABELS, tmp_path)["metrics"]
+    assert not m["not_flagged_ok"]
+    assert "partner-gateway-egress · Data transfer · 2026-08" in m["false_positives"]
 
 
 def test_cli(tmp_path, capsys):

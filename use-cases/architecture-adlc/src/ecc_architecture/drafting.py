@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 from dataclasses import asdict, dataclass, field
 
+from ecc_core.evidence import render_evidence
 from ecc_core.figures import figures
 
 from .assess import Assessment, fmt, target_text
@@ -153,8 +154,7 @@ def render_draft_request(inp: DraftInput) -> str:
         "existing_adrs": inp.adrs,
         "open_questions": [asdict(q) for q in a.open_questions],
     }
-    evidence = "\n".join(f'<evidence id="{e.id}" kind="{e.kind}"' + (f' flags="{",".join(e.flags)}"' if e.flags else "")
-                         + f">{e.summary}</evidence>" for e in a.evidence)
+    evidence = render_evidence(a.evidence)
     return ("Draft the ADR and the user stories for this requirement.\n\n"
             f"<context>\n{json.dumps(payload, indent=2, ensure_ascii=False)}\n</context>\n\n"
             f"<evidence_records>\n{evidence}\n</evidence_records>\n\n"

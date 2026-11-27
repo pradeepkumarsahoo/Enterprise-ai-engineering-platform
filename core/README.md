@@ -19,13 +19,13 @@ core/                          ecc-core: shared platform code, no use-case logic
     plugin.py                  the use-case contract (UseCase) and what commands get (Context)
     cli.py                     the `ecc` command: loads enabled use cases as plugins
     llm.py                     Claude client: complete_json with structured output
-    evidence.py                the Evidence record every use case cites
+    evidence.py                the Evidence record every use case cites; render_evidence for model requests
     safety.py                  secret redaction and prompt-injection flagging
     audit.py                   append-only JSON Lines audit log
-    sources.py                 read-only sources shared by several use cases (runbooks)
+    sources.py                 read-only sources shared by several use cases (runbooks); read_data for data files
     figures.py                 the invented-figures check for drafted text
     page.py                    shared look of the HTML pages use cases write
-    servicenow.py              read-only ServiceNow connector: REST Table API or fixtures
+    servicenow.py              read-only ServiceNow connector: REST Table API or fixtures; sn_time
   tests/
 use-cases/
   incident-investigation/      ecc-incident     · use case 1

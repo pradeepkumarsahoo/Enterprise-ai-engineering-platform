@@ -17,7 +17,7 @@ Checks without a gate:
 - Proposed recommendations match labels: ✅ (REC-IDLE-membership-orphan-volumes, REC-REV-loyalty-ledger-db, REC-REV-notification-worker, REC-RS-promotion-engine-nodes, REC-SCH-commerce-staging-nodes)
 - Suppressed after rejection match labels: ✅ (REC-RS-membership-api-nodes)
 - Unallocated resources match labels: ✅
-- Not flagged, on purpose: steady growth on order-service-nodes, the August bump on partner-gateway-egress, the September SLA credit. False positives: none. Missed: none.
+- Deliberately not flagged: ✅ order-service-nodes · Kubernetes nodes (steady growth of 1.5% a month, and the September SLA credit); partner-gateway-egress · Data transfer (a 9% bump in August). False positives: none. Missed: none.
 
 | Anomaly | Expected cause | Got | |
 |---|---|---|---|

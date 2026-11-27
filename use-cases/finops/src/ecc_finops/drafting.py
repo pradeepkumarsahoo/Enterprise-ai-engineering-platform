@@ -16,7 +16,8 @@ import json
 import re
 from dataclasses import asdict
 
-from ecc_core.figures import figures
+from ecc_core.evidence import render_evidence
+from ecc_core.figures import figures, invented
 
 DRAFT_SCHEMA = {
     "type": "object",
@@ -85,11 +86,9 @@ def render_draft_request(a) -> str:
                              "evidence": r.evidence} for r in a.recommendations],
         "could_not_establish": a.could_not_establish,
     }
-    evidence = "\n".join(f'<evidence id="{e.id}" kind="{e.kind}"' + (f' flags="{",".join(e.flags)}"' if e.flags else "")
-                         + f">{e.summary}</evidence>" for e in a.evidence)
     return ("Explain this month's cloud spend, its anomalies, and draft notes to the owning teams.\n\n"
             f"<context>\n{json.dumps(payload, indent=2, ensure_ascii=False)}\n</context>\n\n"
-            f"<evidence_records>\n{evidence}\n</evidence_records>\n\nReturn JSON matching the required schema.")
+            f"<evidence_records>\n{render_evidence(a.evidence)}\n</evidence_records>\n\nReturn JSON matching the required schema.")
 
 
 # ------------------------------------------------------------------ mock drafter
@@ -133,29 +132,27 @@ def validate(raw: dict, a) -> tuple[str, dict[str, dict], dict[str, dict], list[
     known = {e.id for e in a.evidence}
     flagged = {e.id for e in a.evidence if "possible_prompt_injection" in e.flags}
     allowed = set().union(*(figures(e.summary) for e in a.evidence)) if a.evidence else set()
-    anomaly_ids = {x.id for x in a.anomalies}
-    open_ids = {r.id for r in a.recommendations if r.status == "proposed"}
     rejected: list[dict] = []
 
-    def check(where: str, text: str, cited: list[str]) -> str | None:
-        bad = sorted(figures(text) - allowed, key=float)
+    def reject(item: str, reason: str, bad: list[str] | None = None) -> None:
+        rejected.append({"item": item, "reason": reason, "invented_figures": bad or []})
+
+    def problem(text: str, cited: list[str] | None) -> tuple[str, list[str]] | None:
+        """(reason, invented figures) for unacceptable text; cited=None means no citation is required."""
         if not text:
-            return "empty"
+            return "empty", []
         if claims_action(text):
-            return "claims that something was changed; the agent changes nothing"
-        if not cited or set(cited) <= flagged:
-            return "cites no valid evidence"
+            return "claims that something was changed; the agent changes nothing", []
+        if cited is not None and (not cited or set(cited) <= flagged):
+            return "cites no valid evidence", []
+        bad = invented(text, allowed)
         if bad:
-            rejected.append({"item": where, "reason": f"states figure(s) not in the evidence: {', '.join(bad)}",
-                             "invented_figures": bad})
-            return ""
+            return f"states figure(s) not in the evidence: {', '.join(bad)}", bad
         return None
 
     summary = (raw.get("summary") or "").strip()
-    bad = sorted(figures(summary) - allowed, key=float)
-    if bad or claims_action(summary):
-        rejected.append({"item": "summary", "reason": f"states figure(s) not in the evidence: {', '.join(bad)}" if bad
-                         else "claims that something was changed", "invented_figures": bad})
+    if summary and (p := problem(summary, None)):
+        reject("summary", *p)
         summary = ""
 
     def items(key: str, field: str, label: str, ids: set[str]) -> dict[str, dict]:
@@ -164,17 +161,15 @@ def validate(raw: dict, a) -> tuple[str, dict[str, dict], dict[str, dict], list[
             text, where = (c.get(field) or "").strip(), f"{label} {c.get('id') or n}"
             cited = list(dict.fromkeys(i for i in c.get("evidence", []) if i in known))
             if c.get("id") not in ids:
-                rejected.append({"item": where, "reason": f"'{c.get('id')}' is not an open item", "invented_figures": []})
+                reject(where, f"'{c.get('id')}' is not an open item")
             elif c["id"] in out:
-                rejected.append({"item": where, "reason": "duplicate", "invented_figures": []})
+                reject(where, "duplicate")
+            elif p := problem(text, cited):
+                reject(where, *p)
             else:
-                why = check(where, text, cited)
-                if why:
-                    rejected.append({"item": where, "reason": why, "invented_figures": []})
-                elif why is None:
-                    out[c["id"]] = {"text": text, "evidence": cited}
+                out[c["id"]] = {"text": text, "evidence": cited}
         return out
 
-    explanations = items("anomalies", "explanation", "Anomaly", anomaly_ids)
-    notes = items("notes", "note", "Note", open_ids)
+    explanations = items("anomalies", "explanation", "Anomaly", {x.id for x in a.anomalies})
+    notes = items("notes", "note", "Note", {r.id for r in a.recommendations if r.status == "proposed"})
     return summary, explanations, notes, rejected

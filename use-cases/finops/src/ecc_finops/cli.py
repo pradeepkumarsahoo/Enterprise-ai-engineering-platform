@@ -30,7 +30,7 @@ def register(p: argparse.ArgumentParser, ctx: Context) -> None:
         return Path(a.workdir) if a.workdir else ctx.runs
 
     def rules():
-        from .analysis import Rules
+        from .rules import Rules
         return Rules.from_settings(ctx.settings)
 
     def inputs():
@@ -38,7 +38,7 @@ def register(p: argparse.ArgumentParser, ctx: Context) -> None:
         return FinOpsInputs.load(ctx.servicenow(), ctx.path("finops_dir"), ctx.source("catalogue"))
 
     def show(res: dict) -> None:
-        from .analysis import money, month_label, pct
+        from .fmt import money, month_label, pct
         k = res["kpis"]
         print(f"Spend {month_label(k['last_month'])}: {money(k['total_last'])} ({pct(k['change_vs_prev'])} on "
               f"{month_label(k['prev_month'])})" + (f" · {month_label(k['partial_month'])} forecast "
@@ -93,7 +93,7 @@ def register(p: argparse.ArgumentParser, ctx: Context) -> None:
 
     def cmd_evaluate(a) -> int:
         from . import get_drafter
-        from .review import evaluate
+        from .evaluation import evaluate
         labels = json.loads((ctx.path("finops_dir") / "labels.json").read_text(encoding="utf-8"))
         out = workdir(a) / "evaluation"
         result = evaluate(inputs(), rules(), get_drafter(ctx.provider_name(a.provider), ctx.claude), ctx.gates,

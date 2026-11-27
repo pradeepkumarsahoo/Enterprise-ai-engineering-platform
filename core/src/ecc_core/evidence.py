@@ -17,3 +17,9 @@ class Evidence:
     source: str          # which read-only source produced it
     summary: str         # computed in code; never written by the model
     flags: list[str] = field(default_factory=list)   # e.g. "possible_prompt_injection", "secret_redacted"
+
+
+def render_evidence(items: list[Evidence]) -> str:
+    """Evidence as tagged records for a model request; flags tell the model which text is suspect."""
+    return "\n".join(f'<evidence id="{e.id}" kind="{e.kind}"' + (f' flags="{",".join(e.flags)}"' if e.flags else "")
+                     + f">{e.summary}</evidence>" for e in items)

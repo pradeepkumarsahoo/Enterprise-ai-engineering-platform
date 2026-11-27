@@ -24,16 +24,19 @@ listed as suppressed with the reason the team gave.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from datetime import date, timedelta
 from statistics import mean
 
-from .analysis import Anomaly, Coverage, EvidenceBook, Rules, Series, month_label, money
+from .anomalies import Anomaly, Series
+from .evidence import EvidenceBook
+from .fmt import money, month_label
+from .rules import Rules
+from .spend import Coverage
 
-TYPE_TITLES = {"revert": "Configuration review", "idle": "Idle resource", "schedule": "Scheduling",
-               "rightsize": "Rightsizing"}
 CODES = {"revert": "REV", "idle": "IDLE", "schedule": "SCH", "rightsize": "RS"}
 OPEN = ("proposed", "approved")
+STATUS_ORDER = {"proposed": 0, "approved": 1, "implemented": 2, "rejected": 3, "suppressed": 4}
 RULE_TEXT = {   # the rule each recommendation type applies, cited as evidence
     "idle": lambda r: f"Idle rule: a volume detached for at least {r.idle_days} days",
     "schedule": lambda r: (f"Scheduling rule: a {'/'.join(sorted(r.non_prod))} resource running at least "
@@ -67,6 +70,11 @@ class Recommendation:
     implemented_on: str = ""
     change: str = ""
     decision_note: str = ""
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "Recommendation":
+        """From a results.json entry (which also carries the drafted note)."""
+        return cls(**{f.name: d[f.name] for f in fields(cls)})
 
 
 def rec_id(kind: str, resource: str) -> str:
@@ -174,8 +182,24 @@ def merge(recs: list[Recommendation], register: list[dict], decisions: dict[str,
           cov: Coverage, r: Rules, book: EvidenceBook) -> list[Recommendation]:
     """Apply the savings register and pilot decisions; measure realised savings for implemented ones."""
     by_id = {x.id: x for x in recs}
-    as_of = date.fromisoformat(r.as_of)
+    _apply_register(by_id, register, r, book)
+    for rid, d in decisions.items():
+        if rid in by_id:
+            apply_decision(by_id[rid], d)
     lookup = {(s.resource, s.line_item): s for s in series}
+    for x in by_id.values():
+        if x.status == "implemented":
+            value, note = realised(lookup.get((x.resource, x.line_item)), x.implemented_on, cov, r)
+            x.realised_monthly_usd, x.realised_note = value, note
+            if value is not None:
+                x.evidence.append(book.add("realised", "cost-export",
+                                           f"{x.id}: realised saving {money(value)} a month = {note}"))
+    return sorted(by_id.values(), key=lambda x: (STATUS_ORDER[x.status], -x.estimated_monthly_usd, x.id))
+
+
+def _apply_register(by_id: dict[str, Recommendation], register: list[dict], r: Rules, book: EvidenceBook) -> None:
+    """Decisions taken before the pilot: suppress recent rejections; add or update the others."""
+    as_of = date.fromisoformat(r.as_of)
     for e in register:
         rid = e["id"]
         if e["status"] == "rejected":
@@ -200,25 +224,22 @@ def merge(recs: list[Recommendation], register: list[dict], decisions: dict[str,
                                + (f"; implemented on {e['implemented_on']} under {e['change']}"
                                   if e.get("implemented_on") else ""))]
         by_id[rid] = x
-    for rid, d in decisions.items():
-        x = by_id.get(rid)
-        if x is None or x.status == "suppressed":
-            continue
-        x.status, x.decided_by, x.decided_on = d["status"], d["decided_by"], d["decided_on"]
-        x.decision_note = d.get("note", "")
-        if d.get("estimate_at_approval") is not None:
-            x.estimated_monthly_usd = float(d["estimate_at_approval"])
-            x.estimate_basis = f"frozen at approval on {d['decided_on']}"
-        x.implemented_on, x.change = d.get("implemented_on", x.implemented_on), d.get("change", x.change)
-    for x in by_id.values():
-        if x.status == "implemented":
-            value, note = realised(lookup.get((x.resource, x.line_item)), x.implemented_on, cov, r)
-            x.realised_monthly_usd, x.realised_note = value, note
-            if value is not None:
-                x.evidence.append(book.add("realised", "cost-export",
-                                           f"{x.id}: realised saving {money(value)} a month = {note}"))
-    order = {"proposed": 0, "approved": 1, "implemented": 2, "rejected": 3, "suppressed": 4}
-    return sorted(by_id.values(), key=lambda x: (order[x.status], -x.estimated_monthly_usd, x.id))
+
+
+def apply_decision(x: Recommendation, d: dict) -> bool:
+    """Apply one pilot decision (from ledger.effective). A suppressed recommendation stays suppressed.
+
+    Approval freezes the estimate. Returns whether anything was applied.
+    """
+    if x.status == "suppressed":
+        return False
+    x.status, x.decided_by, x.decided_on = d["status"], d["decided_by"], d["decided_on"]
+    x.decision_note = d.get("note", "")
+    if d.get("estimate_at_approval") is not None:
+        x.estimated_monthly_usd = float(d["estimate_at_approval"])
+        x.estimate_basis = f"frozen at approval on {d['decided_on']}"
+    x.implemented_on, x.change = d.get("implemented_on", x.implemented_on), d.get("change", x.change)
+    return True
 
 
 def totals(recs: list[dict]) -> dict:

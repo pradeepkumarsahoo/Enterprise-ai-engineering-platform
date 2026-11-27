@@ -12,9 +12,9 @@ from dataclasses import asdict
 from ecc_core.llm import ClaudeClient
 from ecc_core.plugin import UseCase
 
-from .analysis import Rules
 from .cli import register
 from .drafting import DRAFT_SCHEMA, DRAFT_SYSTEM_PROMPT, MockDrafter, render_draft_request
+from .rules import Rules
 
 __version__ = "0.2.0"
 

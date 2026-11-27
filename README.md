@@ -369,7 +369,7 @@ an onboarding pack and a practice incident.
 ## 5. Implementation
 
 Code: [`core/`](core/) + one package per use case in [`use-cases/`](use-cases/) · Python 3.11+ ·
-standard library only · 156 automated tests · each package builds as an installable wheel. Five use
+standard library only · 160 automated tests · each package builds as an installable wheel. Five use
 cases are implemented, in priority order:
 
 | # | Use case | Status | What it proves |
@@ -826,14 +826,14 @@ scripts/                     synthetic data generator, README screenshots
 | Platform | Core package, plugin contract, one `ecc` CLI, product configuration with strict validation and environment overrides, a package per use case | Per-environment configuration files, secrets from a vault, a service deployment |
 | Model | Mock (default) and one Claude Opus 5.5 client in core, used by every use case; request shape tested offline | A paid run with Claude. Commands are ready: `ecc incident replay --provider claude`, `ecc knowledge evaluate --provider claude`, `ecc architecture evaluate --provider claude`, `ecc change assess --provider claude`, `ecc finops analyse --provider claude` |
 | Governance | Policy-set risk and approval, append-only audit, secret redaction, injection flagging | Approval workflow and UI from the prototype; tamper-evident audit storage |
-| Quality | 156 tests (36 core, 27 + 13 + 35 + 17 + 28 per use case), compile check, a test that use cases never import each other, the first four packages built and installed in a clean virtualenv | CI pipeline; a wheel build of `ecc-finops` (the local Python lacks the `wheel` package) |
+| Quality | 160 tests (39 core, 27 + 13 + 35 + 17 + 29 per use case), compile check, a test that use cases never import each other, the first four packages built and installed in a clean virtualenv | CI pipeline; a wheel build of `ecc-finops` (the local Python lacks the `wheel` package) |
 
 ### 5.8 Build, test and run
 
 Python 3.11 or newer; nothing to install for the mock provider. Run from the repository root.
 
 ```bash
-python -m pytest                                   # 156 tests across core and the five use cases, no network
+python -m pytest                                   # 160 tests across core and the five use cases, no network
 python ecc.py use-cases                            # what is enabled
 python ecc.py config validate                      # check config/product.toml and every data path
 
@@ -1016,6 +1016,8 @@ python ecc.py finops analyse --provider claude
 | The FinOps likely cause needed change requests, and the shared ServiceNow fixture had none for cost | Added two change records on new configuration items (`loyalty-ledger-db`, `platform-sandbox-cluster`), then ran every use case's tests | The other use cases read changes by their own change sets or an incident's configuration item, so nothing else moved |
 | Validation rejected the FinOps mock's rightsizing note: it quoted the 25% CPU threshold, which no evidence record stated | Each recommendation now cites the rule it applied as evidence | The check was right: a threshold the reader can't trace is an unsupported figure. Found on the first run |
 | A z-score alone flagged a $586 (9.7%) bump in data transfer (z = 4.0) | Two floors: at least $1,000 and at least 10% | A flat series has a tiny deviation, so small noise looks extreme; finance doesn't act on a few hundred dollars |
+| ServiceNow time parsing, the model's evidence block and the data-file reader were copied in three use cases each | Moved to core (`sn_time`, `render_evidence`, `read_data`); FinOps' 380-line analysis module split into rules, spend, anomalies, causes and evidence | Same outputs, byte for byte, checked against the previous commit; each module now has one job |
+| The FinOps evaluation stated that three planted series were "not flagged, on purpose", as text in the code | The series moved into `labels.json` and the evaluation now checks them; a test shows the check fails when the floors are removed | A claim in a report should be measured, not written in |
 | The chart palette validator needs Node.js, which isn't installed | Used the reference palette's first four slots, documented as passing in light and dark, with grey for unallocated | Teams keep fixed colours; the table view under the chart carries every number for anyone who can't tell them apart |
 
 ---

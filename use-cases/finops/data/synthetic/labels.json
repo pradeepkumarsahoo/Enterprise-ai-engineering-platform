@@ -37,6 +37,18 @@
   "suppressed": [
     "REC-RS-membership-api-nodes"
   ],
+  "not_flagged": [
+    {
+      "resource": "order-service-nodes",
+      "line_item": "Kubernetes nodes",
+      "why": "steady growth of 1.5% a month, and the September SLA credit"
+    },
+    {
+      "resource": "partner-gateway-egress",
+      "line_item": "Data transfer",
+      "why": "a 9% bump in August"
+    }
+  ],
   "realised": {
     "REC-SCH-platform-sandbox-cluster": {
       "expected_monthly_usd": 2700,

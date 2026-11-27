@@ -26,13 +26,13 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from pathlib import Path
 from statistics import median
 
 from ecc_core.audit import AuditLog, new_correlation_id
 from ecc_core.safety import clean
-from ecc_core.servicenow import ServiceNowClient
+from ecc_core.servicenow import ServiceNowClient, sn_time  # noqa: F401  (re-exported)
 
 from .models import CAUSE_CATEGORIES
 
@@ -44,11 +44,6 @@ DEPENDENCY_WINDOW = timedelta(hours=2)
 CHANGE_LOOKBACK = timedelta(days=7)
 LABEL_STATUS = "proposed from resolution notes · spot-check before relying on scores"
 AGENT = "agent:incident-investigator"
-
-
-def sn_time(s: str) -> datetime:
-    """ServiceNow 'YYYY-MM-DD HH:MM:SS' (integration user in UTC) → aware datetime."""
-    return datetime.strptime(s, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
 
 
 def iso(dt: datetime) -> str:

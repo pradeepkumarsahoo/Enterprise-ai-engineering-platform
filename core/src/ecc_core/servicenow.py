@@ -25,12 +25,18 @@ import re
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 
 READ_TABLES = frozenset({"incident", "change_request", "problem", "cmdb_rel_ci", "kb_knowledge"})
 TRANSPORTS = ("fixture", "http")
 SCHEMA = {"url": str, "transport": str, "fixture_dir": str, "user_env": str, "password_env": str,
           "token_env": str, "timeout_s": int, "page_size": int, "max_records": int}
+
+
+def sn_time(s: str) -> datetime:
+    """ServiceNow 'YYYY-MM-DD HH:MM:SS' (integration user in UTC) -> aware UTC datetime."""
+    return datetime.strptime(s, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
 
 
 class ServiceNowError(RuntimeError):
